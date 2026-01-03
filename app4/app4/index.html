@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบงานขาย V.13 (Fixed) - MAcc</title>
+    <title>ระบบงานขาย V.17 (Customer Fixed) - MAcc</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
         .nav-item:hover { opacity: 1; background: #334155; }
         .nav-item.active { opacity: 1; background: #2563eb; font-weight: bold; border-right: 4px solid #60a5fa; }
 
-        /* Status Badges */
+        /* Status */
         .status-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; border: 1px solid; }
         .st-paid { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
         .st-pending { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
@@ -53,7 +53,7 @@
     <div class="sidebar no-print">
         <div class="p-6 border-b border-gray-700">
             <h1 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-file-invoice-dollar"></i> ระบบงานขาย</h1>
-            <p class="text-xs text-gray-400 mt-1">MAcc Sales V.13</p>
+            <p class="text-xs text-gray-400 mt-1">MAcc Sales V.17</p>
         </div>
         <nav class="mt-4 space-y-1">
             <div onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item active"><i class="fa-solid fa-chart-line w-5"></i> ภาพรวม</div>
@@ -211,8 +211,23 @@
         </div>
 
         <div id="page-stock" class="hidden">
-            <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-slate-800">สต็อกสินค้า</h2><div class="flex gap-2"><input type="file" id="import-file" accept=".csv" class="hidden" onchange="importCSV(this)"><button onclick="document.getElementById('import-file').click()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">นำเข้า CSV</button><button onclick="if(confirm('ล้างสต็อก?')){PRODUCTS=[];localStorage.removeItem('app4_products');renderStockTable();}" class="bg-red-100 text-red-600 px-4 py-2 rounded">ล้าง</button></div></div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-700 sticky top-0"><tr><th class="p-3">ชื่อสินค้า</th><th class="p-3 text-right">ยอดยกมา (รับ)</th><th class="p-3 text-right text-red-500">ขายไป</th><th class="p-3 text-right text-blue-600">คงเหลือ</th></tr></thead><tbody id="stock-list-body" class="divide-y"></tbody></table></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">สต็อกสินค้า</h2>
+                <div class="flex gap-2">
+                    <button onclick="openProdModal()" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 flex items-center gap-2"><i class="fa-solid fa-plus"></i> เพิ่มสินค้า</button>
+                    <input type="file" id="import-file" accept=".csv" class="hidden" onchange="importCSV(this)">
+                    <button onclick="document.getElementById('import-file').click()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">นำเข้า CSV</button>
+                    <button onclick="if(confirm('ล้างสต็อก?')){PRODUCTS=[];localStorage.removeItem('app4_products');renderStockTable();}" class="bg-red-100 text-red-600 px-4 py-2 rounded">ล้าง</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-y-auto max-h-[600px]">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-100 text-gray-700 sticky top-0"><tr><th class="p-3">ชื่อสินค้า</th><th class="p-3 text-right">ราคา/หน่วย</th><th class="p-3 text-right">ยอดยกมา (รับ)</th><th class="p-3 text-right text-red-500">ขายไป</th><th class="p-3 text-right text-blue-600">คงเหลือ</th><th class="p-3 text-center">แก้ไข</th></tr></thead>
+                        <tbody id="stock-list-body" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="page-settings" class="hidden">
@@ -228,6 +243,19 @@
     <datalist id="product-list"></datalist>
     <div id="cust-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl"><h3 class="text-xl font-bold mb-4">ข้อมูลลูกค้า</h3><input type="hidden" id="c-id"><div class="space-y-3"><input type="text" id="c-code" class="input-box w-full p-2 border" placeholder="รหัสลูกค้า"><input type="text" id="c-name" class="input-box w-full p-2 border" placeholder="ชื่อบริษัท"><textarea id="c-addr" class="input-box w-full p-2 border h-24" placeholder="ที่อยู่และเลขภาษี"></textarea></div><div class="flex justify-end gap-2 mt-6"><button onclick="document.getElementById('cust-modal').classList.add('hidden')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded">ยกเลิก</button><button onclick="saveCustomer()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">บันทึก</button></div></div></div>
     
+    <div id="prod-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">ข้อมูลสินค้า</h3>
+            <input type="hidden" id="p-idx">
+            <div class="space-y-3">
+                <div><label class="text-xs text-gray-500">ชื่อสินค้า</label><input type="text" id="p-name" class="input-box w-full p-2 border"></div>
+                <div><label class="text-xs text-gray-500">ราคา/หน่วย</label><input type="number" id="p-price" class="input-box w-full p-2 border"></div>
+                <div><label class="text-xs text-gray-500">ยอดยกมา (สต็อก)</label><input type="number" id="p-rec" class="input-box w-full p-2 border"></div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6"><button onclick="document.getElementById('prod-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-100 rounded">ปิด</button><button onclick="saveProduct()" class="bg-blue-600 text-white px-4 py-2 rounded">บันทึก</button></div>
+        </div>
+    </div>
+
     <div id="deposit-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl"><h3 class="text-xl font-bold mb-4">เลือกใบกำกับภาษี(มัดจำ)</h3><div class="overflow-y-auto max-h-[300px] border rounded mb-4"><table class="w-full text-sm"><tbody id="deposit-select-list"></tbody></table></div><div class="flex justify-end"><button onclick="document.getElementById('deposit-modal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded">ปิด</button></div></div></div>
 
     <script>
@@ -253,7 +281,7 @@
             addItem(); setDocType('INV');
         };
 
-        // --- CORE FUNCTIONS ---
+        // --- CORE ---
         function autoGrow(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; }
         function showPage(page) {
             document.querySelectorAll('.main-content > div').forEach(el => el.classList.add('hidden'));
@@ -270,12 +298,67 @@
             alert('บันทึกเรียบร้อย');
         }
 
-        // --- CUSTOMER & DETAIL (RESTORED) ---
-        function openNewCustModal() { document.getElementById('cust-modal').classList.remove('hidden'); document.getElementById('c-id').value='new'; document.querySelectorAll('#cust-modal input, #cust-modal textarea').forEach(e=>e.value=''); }
-        function saveCustomer() { const name=document.getElementById('c-name').value; if(!name){alert('ใส่ชื่อ');return;} const n={id:Date.now(),code:document.getElementById('c-code').value,name:name,addr:document.getElementById('c-addr').value}; const idx=document.getElementById('c-id').value; if(idx==='new')CUSTOMERS.push(n);else CUSTOMERS[idx]=n; localStorage.setItem('app4_cust',JSON.stringify(CUSTOMERS)); renderCustomers(); document.getElementById('cust-modal').classList.add('hidden'); }
-        function renderCustomers() { const g=document.getElementById('cust-grid'); g.innerHTML=''; CUSTOMERS.forEach((c,i)=>{g.innerHTML+=`<div class="bg-white p-4 rounded shadow border hover:shadow-md relative group"><button onclick="deleteCust(${i})" class="absolute top-2 right-2 text-gray-300 hover:text-red-500 hidden group-hover:block"><i class="fa-solid fa-trash"></i></button><div class="font-bold text-blue-800">${c.code||'-'}</div><div class="font-bold text-lg">${c.name}</div><div class="text-sm text-gray-500 mt-2 truncate">${c.addr||'-'}</div><div class="mt-3 flex gap-2"><button onclick="viewCustDetail(${i})" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded py-1 text-sm hover:bg-blue-100">ดูประวัติ</button><button onclick="document.getElementById('cust-modal').classList.remove('hidden');document.getElementById('c-id').value=${i};document.getElementById('c-code').value='${c.code}';document.getElementById('c-name').value='${c.name}';document.getElementById('c-addr').value='${c.addr}';" class="flex-1 border border-gray-300 text-gray-600 rounded py-1 text-sm hover:bg-gray-50">แก้ไข</button></div></div>`;}); const p=document.getElementById('cust-picker'); p.innerHTML='<option value="">-- เลือกลูกค้า --</option>'; CUSTOMERS.forEach(c=>p.innerHTML+=`<option value="${c.id}">${c.name}</option>`); }
+        // --- CUSTOMER FIX HERE ---
+        function openNewCustModal() {
+            document.getElementById('cust-modal').classList.remove('hidden');
+            // Clear inputs FIRST
+            document.querySelectorAll('#cust-modal input, #cust-modal textarea').forEach(e => e.value = '');
+            // THEN set ID to 'new' (so it doesn't get cleared)
+            document.getElementById('c-id').value = 'new';
+        }
+
+        function openEditCustModal(idx) {
+            document.getElementById('cust-modal').classList.remove('hidden');
+            const c = CUSTOMERS[idx];
+            document.getElementById('c-id').value = idx;
+            document.getElementById('c-code').value = c.code;
+            document.getElementById('c-name').value = c.name;
+            document.getElementById('c-addr').value = c.addr;
+        }
+
+        function saveCustomer() {
+            const name = document.getElementById('c-name').value;
+            if(!name) { alert('กรุณาใส่ชื่อลูกค้า'); return; }
+
+            const newCust = {
+                id: Date.now(),
+                code: document.getElementById('c-code').value,
+                name: name,
+                addr: document.getElementById('c-addr').value
+            };
+            
+            const idx = document.getElementById('c-id').value;
+            if(idx === 'new') {
+                CUSTOMERS.push(newCust);
+            } else {
+                CUSTOMERS[parseInt(idx)] = newCust;
+            }
+
+            localStorage.setItem('app4_cust', JSON.stringify(CUSTOMERS));
+            renderCustomers();
+            document.getElementById('cust-modal').classList.add('hidden');
+        }
+
+        function renderCustomers() { 
+            const g = document.getElementById('cust-grid'); g.innerHTML=''; 
+            CUSTOMERS.forEach((c,i)=>{
+                g.innerHTML+=`
+                <div class="bg-white p-4 rounded shadow border hover:shadow-md relative group">
+                    <button onclick="deleteCust(${i})" class="absolute top-2 right-2 text-gray-300 hover:text-red-500 hidden group-hover:block"><i class="fa-solid fa-trash"></i></button>
+                    <div class="font-bold text-blue-800">${c.code||'-'}</div>
+                    <div class="font-bold text-lg">${c.name}</div>
+                    <div class="text-sm text-gray-500 mt-2 truncate">${c.addr||'-'}</div>
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="viewCustDetail(${i})" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded py-1 text-sm hover:bg-blue-100">ดูประวัติ</button>
+                        <button onclick="openEditCustModal(${i})" class="flex-1 border border-gray-300 text-gray-600 rounded py-1 text-sm hover:bg-gray-50">แก้ไข</button>
+                    </div>
+                </div>`;
+            }); 
+            updateCustPicker(); 
+        }
         function deleteCust(i) { if(confirm('ลบ?')){ CUSTOMERS.splice(i,1); localStorage.setItem('app4_cust',JSON.stringify(CUSTOMERS)); renderCustomers(); } }
         function pickCustomer(id){ const c=CUSTOMERS.find(x=>x.id==id); if(c){const info=document.getElementById('cust-info'); info.value=`${c.name}\n${c.addr}`; autoGrow(info);} }
+        function updateCustPicker() { const p=document.getElementById('cust-picker'); p.innerHTML='<option value="">-- เลือกลูกค้า --</option>'; CUSTOMERS.forEach(c=>p.innerHTML+=`<option value="${c.id}">${c.name}</option>`); }
         
         function viewCustDetail(idx) {
             const c = CUSTOMERS[idx];
@@ -292,47 +375,82 @@
             showPage('cust-detail');
         }
 
-        // --- STOCK & CSV ---
+        // --- STOCK (V.15 MANUAL ADD + ERROR PROTECTION) ---
         function importCSV(input) {
             const file = input.files[0];
             if(!file) return;
             Papa.parse(file, {
+                header: false, // Don't use header mode to control index manually
                 complete: function(results) {
                     let count = 0;
                     results.data.forEach(row => {
-                        // Col 0=Name, 1=Rec(Qty), 2=Sold(Ignore), 3=Remain(Ignore)
-                        // Note: We only import 'Name' and 'Received Qty' (Start Stock)
-                        if(row.length >= 2 && row[0]) {
+                        // Skip if row[0] matches the header text (prevent bad import)
+                        if(row.length >= 1 && row[0] && row[0] !== 'ชื่อสินค้า' && row[0] !== 'Product Name' && row[0] !== 'Name') {
                             const name = row[0];
-                            const rec = parseFloat(row[1]) || 0; // รับ
-                            // Check exists
-                            const ex = PRODUCTS.find(p => p.name === name);
-                            if(ex) ex.rec += rec; 
-                            else PRODUCTS.push({ name: name, price: 0, rec: rec });
+                            const rec = parseFloat(row[1]) || 0; 
+                            const exist = PRODUCTS.find(p => p.name === name);
+                            if(exist) { exist.rec = rec; } else { PRODUCTS.push({ name: name, price: 0, rec: rec }); }
                             count++;
                         }
                     });
                     localStorage.setItem('app4_products', JSON.stringify(PRODUCTS));
                     renderStockTable(); updateProductDatalist();
-                    alert(`นำเข้าสินค้า ${count} รายการ`);
+                    alert(`อัปเดตข้อมูล ${count} รายการ`);
                 }
             });
         }
         function renderStockTable() {
             const tbody = document.getElementById('stock-list-body'); tbody.innerHTML = '';
-            PRODUCTS.forEach(p => {
-                // Calculate Sold Qty from ALL INV/REC/DEP
+            PRODUCTS.slice(0, 100).forEach((p, i) => { // Render limit to avoid freeze on large list
                 const sold = DOCUMENTS.filter(d => (d.type==='INV' || d.type==='REC' || d.type==='DEP')).reduce((sum, d) => {
-                    const item = d.items.find(i => i.desc === p.name);
+                    const item = d.items.find(it => it.desc === p.name);
                     return sum + (item ? item.qty : 0);
                 }, 0);
                 const remain = (p.rec || 0) - sold;
-                tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${p.name}</td><td class="p-3 text-right text-gray-500">${(p.rec||0)}</td><td class="p-3 text-right text-red-500">${sold}</td><td class="p-3 text-right font-bold text-blue-600">${remain}</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${p.name}</td><td class="p-3 text-right">${(p.price||0).toFixed(2)}</td><td class="p-3 text-right text-gray-500">${(p.rec||0)}</td><td class="p-3 text-right text-red-500">${sold}</td><td class="p-3 text-right font-bold text-blue-600">${remain}</td><td class="p-3 text-center"><button onclick="openProdModal(${i})" class="text-xs border px-2 py-1 rounded">แก้</button></td></tr>`;
             });
         }
+        
+        function openProdModal(idx=null) {
+            document.getElementById('prod-modal').classList.remove('hidden');
+            if(idx !== null) {
+                document.getElementById('p-idx').value = idx;
+                document.getElementById('p-name').value = PRODUCTS[idx].name;
+                document.getElementById('p-price').value = PRODUCTS[idx].price;
+                document.getElementById('p-rec').value = PRODUCTS[idx].rec;
+            } else {
+                document.getElementById('p-idx').value = 'new';
+                document.getElementById('p-name').value = '';
+                document.getElementById('p-price').value = '';
+                document.getElementById('p-rec').value = '';
+            }
+        }
+        
+        function saveProduct() {
+            const idx = document.getElementById('p-idx').value;
+            const name = document.getElementById('p-name').value;
+            const price = parseFloat(document.getElementById('p-price').value) || 0;
+            const rec = parseFloat(document.getElementById('p-rec').value) || 0;
+            
+            if(!name) { alert('ใส่ชื่อสินค้า'); return; }
+
+            if(idx === 'new') {
+                PRODUCTS.push({ name, price, rec });
+            } else {
+                PRODUCTS[idx].name = name;
+                PRODUCTS[idx].price = price;
+                PRODUCTS[idx].rec = rec;
+            }
+            
+            localStorage.setItem('app4_products', JSON.stringify(PRODUCTS));
+            renderStockTable();
+            updateProductDatalist();
+            document.getElementById('prod-modal').classList.add('hidden');
+        }
+        
         function updateProductDatalist() { const d=document.getElementById('product-list'); d.innerHTML=''; PRODUCTS.forEach(p=>d.innerHTML+=`<option value="${p.name}">`); }
 
-        // --- DOCUMENT LOGIC ---
+        // --- DOC LOGIC ---
         function setDocType(type) {
             const titles={QUO:'ใบเสนอราคา',INV:'ใบแจ้งหนี้ / ใบกำกับภาษี',REC:'ใบเสร็จรับเงิน',DEP:'ใบกำกับภาษี (เงินมัดจำ)'};
             const colors={QUO:'text-yellow-700',INV:'text-blue-800',REC:'text-green-700',DEP:'text-purple-700'};
@@ -427,16 +545,13 @@
             addItem(); setDocType('INV');
         }
 
-        // --- DEPOSIT DEDUCTION ---
         function openDepositSelector() {
             document.getElementById('deposit-modal').classList.remove('hidden');
             const tbody = document.getElementById('deposit-select-list'); tbody.innerHTML = '';
             const deps = DOCUMENTS.filter(d => d.type === 'DEP' && d.status === 'PAID');
             if(deps.length === 0) { tbody.innerHTML = '<tr><td class="p-4 text-center text-gray-400">ไม่มีใบมัดจำที่ใช้ได้</td></tr>'; return; }
             deps.forEach(d => {
-                let baseAmt = d.total; // Use total as deduct amount (usually include VAT in deduction or not depends on policy, this is simplified)
-                // If Deposit Tax Invoice includes VAT, we usually deduct the base amount from base, or total from total.
-                // Assuming deduction on base amount for calculation logic:
+                let baseAmt = d.total; 
                 if(d.useVat) baseAmt = d.total * 100 / 107;
                 tbody.innerHTML += `<tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="selectDeposit(${d.id}, ${baseAmt})"><td class="p-3">${d.no} (${d.date})<br><span class="text-xs text-gray-500">${d.custInfo.split('\n')[0]}</span></td><td class="p-3 text-right font-bold text-purple-600">${baseAmt.toLocaleString(undefined,{maximumFractionDigits:2})}</td></tr>`;
             });
@@ -444,7 +559,7 @@
         function selectDeposit(id, amount) { DEPOSIT_DEDUCT = amount; document.getElementById('deposit-doc-id').value = id; document.getElementById('deposit-display').innerText = "- " + amount.toLocaleString(); document.getElementById('deposit-modal').classList.add('hidden'); calcTotal(); }
 
         // --- ACTIONS ---
-        function createDepositFromQuo(quoId) { const quo=DOCUMENTS.find(d=>d.id===quoId); if(!quo)return; CURRENT_DOC_ID=null; setDocType('DEP'); document.getElementById('cust-info').value=quo.custInfo; document.getElementById('doc-ref').value=`อ้างอิง: ${quo.no}`; document.getElementById('use-vat').checked=quo.useVat; document.getElementById('item-list').innerHTML=''; addItem("เงินมัดจำ (Deposit)",1,0); autoGrow(document.getElementById('cust-info')); showPage('create'); alert('กรุณาระบุยอดมัดจำ'); }
+        function createDepositFromQuo(quoId) { const quo=DOCUMENTS.find(d=>d.id===quoId); if(!quo)return; CURRENT_DOC_ID=null; setDocType('DEP'); document.getElementById('cust-info').value=quo.custInfo; document.getElementById('doc-ref').value=`อ้างอิง: ${quo.no}`; document.getElementById('use-vat').checked=quo.useVat; document.getElementById('item-list').innerHTML=''; addItem("เงินมัดจำ",1,0); autoGrow(document.getElementById('cust-info')); showPage('create'); alert('กรุณากรอกยอดมัดจำ'); }
         function createInvoiceFromQuo(quoId) { const quo=DOCUMENTS.find(d=>d.id===quoId); if(!quo)return; quo.status='ACCEPTED'; localStorage.setItem('app4_docs',JSON.stringify(DOCUMENTS)); CURRENT_DOC_ID=null; setDocType('INV'); document.getElementById('cust-info').value=quo.custInfo; document.getElementById('doc-ref').value=`อ้างอิง: ${quo.no}`; document.getElementById('use-vat').checked=quo.useVat; document.getElementById('item-list').innerHTML=''; quo.items.forEach(i=>addItem(i.desc,i.qty,i.price)); showPage('create'); alert('สร้างใบแจ้งหนี้แล้ว'); }
         function createReceiptFromInv(invId) { const inv=DOCUMENTS.find(d=>d.id===invId); if(!inv)return; inv.status='PAID'; localStorage.setItem('app4_docs',JSON.stringify(DOCUMENTS)); CURRENT_DOC_ID=null; setDocType('REC'); document.getElementById('cust-info').value=inv.custInfo; document.getElementById('doc-ref').value=`อ้างอิง: ${inv.no}`; document.getElementById('use-vat').checked=inv.useVat; document.getElementById('item-list').innerHTML=''; inv.items.forEach(i=>addItem(i.desc,i.qty,i.price)); showPage('create'); alert('สร้างใบเสร็จแล้ว'); }
         function loadDoc(id) { const d=DOCUMENTS.find(x=>x.id===id); if(d){ CURRENT_DOC_ID=id; setDocType(d.type); document.getElementById('doc-no').value=d.no; document.getElementById('cust-info').value=d.custInfo; document.getElementById('doc-ref').value=d.ref||''; document.getElementById('item-list').innerHTML=''; d.items.forEach(i=>addItem(i.desc,i.qty,i.price)); showPage('create'); autoGrow(document.getElementById('cust-info')); } }
@@ -452,7 +567,7 @@
 
         function renderHistory(){const t=document.getElementById('history-table-body');t.innerHTML='';DOCUMENTS.forEach(d=>{
             let b='',a='';
-            if(d.type==='QUO'){b='<span class="status-badge st-draft">เสนอราคา</span>'; a=`<button onclick="createDepositFromQuo(${d.id})" class="text-purple-600 text-xs border border-purple-200 px-2 py-1 rounded mr-1">รับมัดจำ</button><button onclick="createInvoiceFromQuo(${d.id})" class="text-blue-600 text-xs border border-blue-200 px-2 py-1 rounded">เปิดบิล</button>`;}
+            if(d.type==='QUO'){b='<span class="status-badge st-draft">เสนอราคา</span>'; a=`<button onclick="createDepositFromQuo(${d.id})" class="text-purple-600 text-xs border border-purple-200 px-2 py-1 rounded mr-1">มัดจำ</button><button onclick="createInvoiceFromQuo(${d.id})" class="text-blue-600 text-xs border border-blue-200 px-2 py-1 rounded">เปิดบิล</button>`;}
             else if(d.type==='DEP'){b=d.status==='USED'?'<span class="status-badge st-draft">ใช้แล้ว</span>':'<span class="status-badge st-deposit">มัดจำ</span>';}
             else if(d.type==='INV'){b=d.status==='PAID'?'<span class="status-badge st-paid">จ่ายแล้ว</span>':'<span class="status-badge st-pending">รอเก็บเงิน</span>'; if(d.status!=='PAID') a=`<button onclick="createReceiptFromInv(${d.id})" class="text-green-600 text-xs border border-green-200 px-2 py-1 rounded">รับเงิน</button>`;}
             else b='<span class="status-badge st-paid">ใบเสร็จ</span>';
@@ -460,7 +575,6 @@
         });}
         
         function updateDashboard(){
-            // Correct Logic: Total Sales = INV (Net) + DEP (Deposit Revenue)
             const sales = DOCUMENTS.filter(d => (d.type === 'INV' || d.type === 'DEP')).reduce((sum, d) => sum + d.total, 0); 
             const pending = DOCUMENTS.filter(d => (d.type === 'INV' || d.type === 'DEP') && d.status !== 'PAID' && d.status !== 'USED').reduce((sum, d) => sum + d.total, 0);
             const paid = DOCUMENTS.filter(d => d.type === 'REC' || (d.type === 'DEP' && d.status === 'PAID')).reduce((sum, d) => sum + d.total, 0);
