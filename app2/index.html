@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-Audit Pro: ระบบตรวจสอบบัญชี (Universal Import)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; font-size: 14px; }
+        .num-input { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .row-checked { background-color: #ecfdf5; border-left: 4px solid #10b981; } 
+        .row-unchecked { background-color: #fff1f2; border-left: 4px solid #f43f5e; opacity: 0.9; }
+        .tab-btn { @apply px-4 py-2 font-bold cursor-pointer text-gray-500 hover:bg-white hover:text-blue-600 transition-all rounded-t-lg border-b-2 border-transparent; }
+        .tab-active { @apply bg-white text-blue-700 border-b-4 border-blue-600 shadow-sm; }
+        .btn-action { @apply px-3 py-1.5 rounded shadow text-xs flex items-center justify-center gap-2 transition-transform active:scale-95 font-bold; }
+        
+        .match-ok { background-color: #dcfce7; color: #166534; font-weight: bold; }
+        .match-warn { background-color: #fef9c3; color: #854d0e; }
+        .match-err { background-color: #fee2e2; color: #991b1b; font-weight: bold; }
+
+        @media print { 
+            .no-print { display: none !important; } 
+            body { background-color: white; -webkit-print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 10mm; }
+            input { border: none !important; background: transparent !important; padding: 0; }
+            .shadow-lg, .border { border: 1px solid #000 !important; box-shadow: none !important; }
+            .overflow-x-auto { overflow: visible; }
+            /* Print Modes */
+            body.print-mode-checked tr.row-unchecked { display: none !important; }
+            body.print-mode-unchecked tr.row-checked { display: none !important; }
+        }
+    </style>
+</head>
+<body class="p-4 text-slate-800 min-h-screen relative">
+
+    <div id="save-status" class="fixed top-4 right-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm opacity-0 transition-opacity no-print z-50">
+        <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกแล้ว
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 no-print">
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-briefcase text-blue-600"></i> M-Audit Pro <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">Universal</span>
+                </h1>
+                <div class="flex gap-2">
+                    <input type="text" id="client-name" placeholder="ชื่อบริษัท..." class="border p-1.5 rounded text-sm w-48" oninput="saveData()">
+                    <button onclick="clearAll()" class="text-red-400 text-xs underline">ล้างข้อมูล</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-1 border-b border-gray-300 mb-0 no-print overflow-x-auto">
+            <button onclick="switchTab('audit')" id="tab-audit" class="tab-btn tab-active text-purple-700 bg-purple-50">1. ตรวจสอบ ภพ.30</button>
+            <button onclick="switchTab('recon-vat')" id="tab-recon-vat" class="tab-btn text-orange-700 bg-orange-50">2. กระทบยอด ภพ.30 (vs GL)</button>
+            <button onclick="switchTab('recon-bank')" id="tab-recon-bank" class="tab-btn text-green-700 bg-green-50">3. กระทบยอดธนาคาร</button>
+        </div>
+
+        <div class="bg-white p-6 rounded-b-xl shadow-lg border border-gray-200 min-h-[600px]">
+            
+            <div id="content-audit">
+                <div class="flex flex-wrap gap-3 items-end mb-4 no-print bg-purple-50 p-3 rounded-lg border border-purple-100">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1">นำเข้า ภพ.30 (Express)</label>
+                        <div class="flex gap-1">
+                            <select id="audit-encoding" class="border p-1 text-xs rounded bg-white"><option value="TIS-620">Thai (TIS-620)</option><option value="UTF-8">UTF-8</option></select>
+                            <button onclick="document.getElementById('file-audit').click()" class="btn-action bg-purple-600 text-white hover:bg-purple-700">Import</button>
+                            <input type="file" id="file-audit" class="hidden" accept=".csv,.txt,.xlsx,.xls" onchange="importAuditFile(this)">
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1">ค้นหาเพื่อติ๊กตรวจ (ยิงบาร์โค้ดได้)</label>
+                        <input type="text" id="audit-search" placeholder="เลขใบกำกับ..." class="w-full border p-1.5 rounded shadow-inner text-sm focus:ring-2 focus:ring-purple-300" onkeyup="searchAndMarkAudit(event)">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1">ส่งออก / พิมพ์</label>
+                        <div class="flex gap-1">
+                            <button onclick="exportAuditExcel()" class="btn-action bg-green-600 text-white hover:bg-green-700">Excel</button>
+                            <button onclick="setPrintMode('checked')" class="btn-action bg-gray-700 text-white hover:bg-gray-800">พิมพ์ยื่น</button>
+                            <button onclick="setPrintMode('unchecked')" class="btn-action bg-red-500 text-white hover:bg-red-600">พิมพ์แก้</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-4 text-center no-print text-xs">
+                    <div class="p-2 bg-gray-50 border rounded">ทั้งหมด: <span id="cnt-total" class="font-bold">0</span> รายการ (<span id="sum-audit-total">0.00</span>)</div>
+                    <div class="p-2 bg-green-50 border border-green-200 rounded text-green-700">เลือกยื่น: <span id="cnt-checked" class="font-bold">0</span> รายการ (<span id="sum-audit-checked" class="font-bold text-lg">0.00</span>)</div>
+                    <div class="p-2 bg-red-50 border border-red-200 rounded text-red-700">ไม่ยื่น: <span id="sum-audit-unchecked" class="font-bold">0.00</span></div>
+                </div>
+
+                <div class="overflow-x-auto"><table class="w-full text-sm border-collapse"><thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10"><tr><th class="p-2 border w-10 text-center no-print"><input type="checkbox" onclick="toggleAllAudit(this)"></th><th class="p-2 border w-24">วันที่</th><th class="p-2 border w-32">เลขใบกำกับ</th><th class="p-2 border">ชื่อผู้ขาย</th><th class="p-2 border w-28 text-center">เลขผู้เสียภาษี</th><th class="p-2 border w-28 text-right">มูลค่า</th><th class="p-2 border w-24 text-right">ภาษี</th><th class="p-2 border w-32">หมายเหตุ</th></tr></thead><tbody id="audit-body"></tbody><tfoot class="bg-purple-50 font-bold"><tr><td colspan="6" class="p-2 text-right">รวมยอดสุทธิ</td><td class="p-2 text-right" id="ft-tax">0.00</td><td></td></tr></tfoot></table></div>
+            </div>
+
+            <div id="content-recon-vat" class="hidden">
+                <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-4 no-print flex flex-wrap gap-4 items-center">
+                    <div class="flex-1">
+                        <h3 class="font-bold text-orange-800">กระทบยอด ภพ.30 กับ บัญชี (GL)</h3>
+                        <p class="text-xs text-orange-600">เปรียบเทียบข้อมูลจาก Tab 1 กับไฟล์ GL ภาษีซื้อ</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="vat-gl-encoding" class="border p-1.5 text-xs rounded bg-white"><option value="TIS-620">Thai GL</option><option value="UTF-8">UTF-8</option></select>
+                        <button onclick="document.getElementById('file-vat-gl').click()" class="btn-action bg-orange-600 text-white hover:bg-orange-700"><i class="fa-solid fa-upload"></i> Import GL ภาษีซื้อ</button>
+                        <input type="file" id="file-vat-gl" class="hidden" accept=".csv,.xlsx,.xls" onchange="importGLFile(this, 'vat')">
+                        <button onclick="exportReconVatExcel()" class="btn-action bg-green-600 text-white hover:bg-green-700"><i class="fa-solid fa-file-excel"></i> Export ผลต่าง</button>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mb-2 font-bold text-sm bg-gray-100 p-2 rounded">
+                    <div class="text-blue-600">ยอด ภพ.30 (Tab 1): <span id="rec-vat-sum-report">0.00</span></div>
+                    <div class="text-orange-600">ยอด GL (Import): <span id="rec-vat-sum-gl">0.00</span></div>
+                    <div class="text-red-600">ผลต่าง: <span id="rec-vat-sum-diff">0.00</span></div>
+                </div>
+                <div class="overflow-x-auto border rounded-lg max-h-[500px]">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-gray-100 text-xs uppercase sticky top-0">
+                            <tr>
+                                <th class="p-2 border text-left w-24">สถานะ</th>
+                                <th class="p-2 border text-left w-32">Ref / Voucher</th>
+                                <th class="p-2 border text-left">รายละเอียด</th>
+                                <th class="p-2 border text-right bg-blue-50 w-28">ยอด ภพ.30</th>
+                                <th class="p-2 border text-right bg-orange-50 w-28">ยอด GL</th>
+                                <th class="p-2 border text-right w-24">ผลต่าง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recon-vat-body">
+                            <tr><td colspan="6" class="p-4 text-center text-gray-400">กรุณา Import GL เพื่อเริ่มเปรียบเทียบ</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="content-recon-bank" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 no-print">
+                    <div class="bg-blue-50 p-3 rounded border">
+                        <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-blue-800">1. บัญชี (GL)</h4><div class="flex gap-1"><select id="bank-gl-encoding" class="text-xs border rounded bg-white"><option value="TIS-620">TIS-620</option><option value="UTF-8">UTF-8</option></select><button onclick="document.getElementById('file-bank-gl').click()" class="btn-action bg-blue-600 text-white text-xs py-1">Import GL</button><input type="file" id="file-bank-gl" class="hidden" accept=".csv,.xlsx,.xls" onchange="importGLFile(this, 'bank')"></div></div>
+                        <div class="text-xs text-gray-500" id="bank-gl-status">ยังไม่นำเข้า</div>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded border">
+                        <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-green-800">2. Statement</h4><button onclick="document.getElementById('file-bank-stmt').click()" class="btn-action bg-green-600 text-white text-xs py-1">Import Excel</button><input type="file" id="file-bank-stmt" class="hidden" accept=".xlsx,.xls,.csv" onchange="importBankStmt(this)"></div>
+                        <div class="text-xs text-gray-500" id="bank-stmt-status">ยังไม่นำเข้า</div>
+                        <div class="text-[10px] text-red-400 mt-1">* ไฟล์ Excel ต้องมีหัวตาราง "ถอน" และ "ฝาก"</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-2 mb-4 no-print">
+                    <button onclick="runBankRecon()" class="btn-action bg-indigo-600 text-white text-sm px-6 py-2 shadow-lg hover:bg-indigo-700"><i class="fa-solid fa-sync"></i> Reconcile จับคู่ยอด</button>
+                    <button onclick="exportBankRecon()" class="btn-action bg-gray-600 text-white text-sm px-4 py-2 hover:bg-gray-700"><i class="fa-solid fa-file-excel"></i> Export ผลต่าง</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border rounded p-3 bg-white">
+                        <h4 class="font-bold text-red-600 text-sm mb-2 border-b pb-1">รายการใน GL ที่ไม่พบใน Bank (เช่น เช็คค้างจ่าย)</h4>
+                        <div class="overflow-y-auto max-h-[400px]"><table class="w-full text-xs"><tbody id="table-bank-gl-unmatch"></tbody></table></div>
+                    </div>
+                    <div class="border rounded p-3 bg-white">
+                        <h4 class="font-bold text-orange-600 text-sm mb-2 border-b pb-1">รายการใน Bank ที่ไม่พบใน GL (เช่น ดอกเบี้ย)</h4>
+                        <div class="overflow-y-auto max-h-[400px]"><table class="w-full text-xs"><tbody id="table-bank-stmt-unmatch"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURE ---
+        let appData = { 
+            client: '', 
+            audit: [], // VAT Report Data (Tab 1)
+            vatGL: [], // VAT GL Data (Tab 2)
+            vatReconResult: [], // Result of Tab 2
+            bankGL: [], // Bank GL Data (Tab 3)
+            bankStmt: [], // Bank Stmt Data (Tab 3)
+            bankUnmatchGL: [], bankUnmatchStmt: [] // Result of Tab 3
+        };
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => { loadData(); renderAll(); });
+        function saveData() { appData.client=document.getElementById('client-name').value; localStorage.setItem('m_audit_platinum', JSON.stringify(appData)); const s=document.getElementById('save-status'); s.style.opacity='1'; setTimeout(()=>s.style.opacity='0',1000); }
+        function loadData() { const d=JSON.parse(localStorage.getItem('m_audit_platinum')); if(d) appData=d; }
+        function clearAll() { if(confirm('ล้างข้อมูลทั้งหมด?')) { localStorage.removeItem('m_audit_platinum'); location.reload(); } }
+        function renderAll() { document.getElementById('client-name').value=appData.client||''; renderAudit(); if(appData.vatGL.length>0) runVatRecon(); updateBankUI(); }
+        function switchTab(t) { ['audit','recon-vat','recon-bank'].forEach(x=>{ document.getElementById('content-'+x).classList.add('hidden'); document.getElementById('tab-'+x).className="tab-btn"; }); document.getElementById('content-'+t).classList.remove('hidden'); document.getElementById('tab-'+t).className="tab-btn tab-active"; }
+
+        // --- PART 1: AUDIT VAT ---
+        function importAuditFile(input) {
+            const file=input.files[0]; if(!file)return;
+            const encoding=document.getElementById('audit-encoding').value;
+            const reader=new FileReader();
+            reader.onload=e=>{
+                const decoder=new TextDecoder(encoding);
+                const wb=XLSX.read(decoder.decode(e.target.result), {type:'string'});
+                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:false});
+                let items=[];
+                data.forEach(row=>{
+                    if(row.length<5) return;
+                    let dateStr=String(row[1]||"").trim();
+                    if(!dateStr.match(/^\d{2}\/\d{2}\/\d{2,4}$/)) return;
+                    let base=parseFloat(String(row[9]||"0").replace(/,/g,'')), tax=parseFloat(String(row[10]||"0").replace(/,/g,''));
+                    if(isNaN(base)){ let nums=row.filter(c=>!isNaN(parseFloat(String(c).replace(/,/g,'')))); if(nums.length>=2){tax=parseFloat(String(nums[nums.length-1])); base=parseFloat(String(nums[nums.length-2]));} }
+                    if(!isNaN(base)) items.push({ id:Math.random(), date:dateStr, inv:String(row[2]||"-").trim(), ref:String(row[4]||"").trim(), vendor:String(row[5]||"-").trim(), taxId:String(row[6]||"-").replace(/[^0-9]/g,''), base:base, tax:tax, note:'', checked:true });
+                });
+                if(items.length>0) { appData.audit=items; renderAudit(); saveData(); alert(`Import ภพ.30: ${items.length} รายการ`); }
+                input.value='';
+            }; reader.readAsArrayBuffer(file);
+        }
+        function renderAudit() {
+            const tb=document.getElementById('audit-body'); tb.innerHTML='';
+            let tTax=0, cTax=0;
+            appData.audit.forEach((v,i)=>{
+                tTax+=v.tax; if(v.checked) cTax+=v.tax;
+                const cls=v.checked?'row-checked':'row-unchecked';
+                tb.innerHTML+=`<tr class="border-b ${cls}"><td class="p-2 text-center no-print"><input type="checkbox" ${v.checked?'checked':''} onclick="toggleAudit(${i})"></td><td class="p-2 text-xs font-mono">${v.date}</td><td class="p-2 text-xs font-bold text-blue-800">${v.inv}</td><td class="p-2 text-xs truncate max-w-[150px]">${v.vendor}</td><td class="p-2 text-xs text-center font-mono">${v.taxId}</td><td class="p-2 text-right text-sm text-gray-600">${fmt(v.base)}</td><td class="p-2 text-right font-bold text-sm text-gray-800">${fmt(v.tax)}</td><td class="p-2"><input value="${v.note||''}" class="w-full bg-transparent text-xs" placeholder="..." onchange="appData.audit[${i}].note=this.value;saveData()"></td></tr>`;
+            });
+            document.getElementById('sum-audit-total').innerText=fmt(tTax); document.getElementById('cnt-total').innerText=appData.audit.length;
+            document.getElementById('sum-audit-checked').innerText=fmt(cTax); document.getElementById('cnt-checked').innerText=appData.audit.filter(x=>x.checked).length;
+            document.getElementById('sum-audit-unchecked').innerText=fmt(tTax-cTax); document.getElementById('ft-tax').innerText=fmt(cTax);
+            if(appData.vatGL.length>0) runVatRecon();
+        }
+        function toggleAudit(i) { appData.audit[i].checked=!appData.audit[i].checked; renderAudit(); saveData(); }
+        function toggleAllAudit(el) { appData.audit.forEach(v=>v.checked=el.checked); renderAudit(); saveData(); }
+        function searchAndMarkAudit(e) { if(e.key==='Enter'){ const k=e.target.value.trim(); if(!k)return; appData.audit.forEach(v=>{ if(String(v.inv).includes(k)) v.checked=true; }); renderAudit(); saveData(); e.target.value=''; } }
+        function setPrintMode(mode) { document.body.className="p-4 text-slate-800 min-h-screen relative"; if(mode==='checked') document.body.classList.add('print-mode-checked'); if(mode==='unchecked') { document.body.classList.add('print-mode-unchecked'); document.getElementById('ft-tax').innerText=document.getElementById('sum-audit-unchecked').innerText; } window.print(); }
+        function exportAuditExcel() { const d=appData.audit.filter(v=>v.checked).map((v,i)=>({"ลำดับ":i+1,"วันที่":v.date,"เลขใบกำกับ":v.inv,"ชื่อผู้ขาย":v.vendor,"เลขผู้เสียภาษี":v.taxId,"มูลค่า":v.base,"ภาษี":v.tax,"หมายเหตุ":v.note})); const ws=XLSX.utils.json_to_sheet(d); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"VAT"); XLSX.writeFile(wb,"VAT_Output.xlsx"); }
+
+        // --- UNIVERSAL GL IMPORT (SMART DETECT) ---
+        function importGLFile(input, type) {
+            const file=input.files[0]; if(!file)return;
+            const encoding = type==='vat' ? document.getElementById('vat-gl-encoding').value : document.getElementById('bank-gl-encoding').value;
+            const reader=new FileReader();
+            reader.onload=e=>{
+                const decoder=new TextDecoder(encoding);
+                const wb=XLSX.read(decoder.decode(e.target.result),{type:'string'});
+                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1, raw:false});
+                
+                // 1. Scan for Header Row
+                let headerIdx = -1;
+                for(let i=0; i<Math.min(data.length,20); i++) {
+                    const str = JSON.stringify(data[i]);
+                    if(str.includes("วันที่") && (str.includes("ใบสำคัญ") || str.includes("Voucher"))) {
+                        headerIdx = i; break;
+                    }
+                }
+                
+                if(headerIdx === -1) { alert("❌ ไม่พบหัวตาราง (วันที่, ใบสำคัญ) ลองเปลี่ยนรหัสภาษา TIS-620/UTF-8"); return; }
+
+                // 2. Map Columns
+                const header = data[headerIdx];
+                let colDate = header.indexOf("วันที่");
+                let colRef = header.indexOf("ใบสำคัญ");
+                if(colRef === -1) colRef = header.findIndex(c => String(c).includes("Voucher"));
+                let colDesc = header.indexOf("คำอธิบาย");
+                let colDr = header.indexOf("เดบิต");
+                let colCr = header.indexOf("เครดิต");
+
+                // 3. Extract Data
+                let items = [];
+                for(let i=headerIdx+1; i<data.length; i++) {
+                    const row = data[i];
+                    if(!row[colDate]) continue;
+                    let dateStr = String(row[colDate]).trim();
+                    if(!dateStr.match(/\d/)) continue;
+
+                    let ref = String(row[colRef]||"").trim();
+                    let desc = String(row[colDesc]||"").trim();
+                    let dr = parseFloat(String(row[colDr]||"0").replace(/,/g,''));
+                    let cr = parseFloat(String(row[colCr]||"0").replace(/,/g,''));
+
+                    if(dr>0 || cr>0) {
+                        items.push({ date:dateStr, ref:ref, desc:desc, debit:dr||0, credit:cr||0, matchId:null });
+                    }
+                }
+
+                if(type === 'vat') {
+                    // For VAT GL: We only care about Debit (Tax Paid)
+                    // Note: Express GL for VAT might have Dr/Cr depending on adjustment
+                    appData.vatGL = items.map(i => ({...i, amount: i.debit > 0 ? i.debit : -i.credit})); 
+                    runVatRecon(); alert(`GL VAT Import: ${items.length} รายการ`);
+                } else {
+                    appData.bankGL = items;
+                    updateBankUI(); alert(`GL Bank Import: ${items.length} รายการ`);
+                }
+                saveData(); input.value='';
+            }; reader.readAsArrayBuffer(file);
+        }
+
+        // --- VAT RECON ---
+        function runVatRecon() {
+            const tb=document.getElementById('recon-vat-body'); tb.innerHTML='';
+            let mV=new Map(), mG=new Map(), sV=0, sG=0;
+            appData.audit.forEach(v=>{ 
+                // Group by Ref (or Inv)
+                let key = (v.ref && v.ref.length>3) ? v.ref : v.inv; 
+                key = key.toUpperCase().replace(/\s/g,'');
+                if(!mV.has(key)) mV.set(key,{amt:0,desc:v.vendor}); mV.get(key).amt+=v.tax; sV+=v.tax;
+            });
+            appData.vatGL.forEach(g=>{
+                if(g.amount <= 0) return; // Only verify Debits
+                let key=g.ref.toUpperCase().replace(/\s/g,'');
+                if(!mG.has(key)) mG.set(key,{amt:0,desc:g.desc}); mG.get(key).amt+=g.amount; sG+=g.amount;
+            });
+            let keys=new Set([...mV.keys(), ...mG.keys()]);
+            let rows=[];
+            keys.forEach(k=>{
+                let v=mV.get(k)||{amt:0,desc:''}, g=mG.get(k)||{amt:0,desc:''};
+                let diff=v.amt-g.amt;
+                let status=Math.abs(diff)<0.05?'ตรงกัน':(g.amt==0?'ไม่มีใน GL':(v.amt==0?'ไม่มีใน ภพ.30':'ยอดไม่เท่า'));
+                let css=Math.abs(diff)<0.05?'match-ok':(g.amt==0?'match-err':'match-warn');
+                rows.push({ k, desc:v.desc||g.desc, vAmt:v.amt, gAmt:g.amt, diff, status, css });
+            });
+            rows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+            appData.vatReconResult=rows;
+            rows.forEach(r=>{
+                tb.innerHTML+=`<tr class="border-b ${r.css}"><td class="p-2 text-xs">${r.status}</td><td class="p-2 font-bold text-xs">${r.k}</td><td class="p-2 text-xs truncate max-w-[150px]">${r.desc}</td><td class="p-2 text-right">${fmt(r.vAmt)}</td><td class="p-2 text-right">${fmt(r.gAmt)}</td><td class="p-2 text-right font-bold">${fmt(r.diff)}</td></tr>`;
+            });
+            document.getElementById('rec-vat-sum-report').innerText=fmt(sV); document.getElementById('rec-vat-sum-gl').innerText=fmt(sG); document.getElementById('rec-vat-sum-diff').innerText=fmt(sV-sG);
+        }
+        function exportReconVatExcel() { const d=appData.vatReconResult.map(r=>({"สถานะ":r.status,"Ref":r.k,"รายละเอียด":r.desc,"ภพ.30":r.vAmt,"GL":r.gAmt,"ผลต่าง":r.diff})); const ws=XLSX.utils.json_to_sheet(d); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"VatRecon"); XLSX.writeFile(wb,"VAT_Reconcile.xlsx"); }
+
+        // --- BANK RECON ---
+        function importBankStmt(input) {
+            const file=input.files[0]; if(!file)return;
+            const reader=new FileReader();
+            reader.onload=e=>{
+                const wb=XLSX.read(e.target.result,{type:'binary'});
+                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+                let items=[], wIdx=-1, dIdx=-1, dateIdx=-1;
+                // Smart Column Search
+                for(let i=0; i<Math.min(data.length,20); i++) {
+                    const row=data[i];
+                    row.forEach((c,idx)=>{ const s=String(c).toLowerCase(); if(s.includes('ถอน')||s.includes('withdraw')) wIdx=idx; if(s.includes('ฝาก')||s.includes('deposit')) dIdx=idx; if(s.includes('วัน')||s.includes('date')) dateIdx=idx; });
+                    if(wIdx!==-1 && dIdx!==-1) break;
+                }
+                if(wIdx!==-1){
+                    data.forEach(row=>{
+                        let dStr=row[dateIdx];
+                        if(dStr && String(dStr).match(/\d/)) {
+                            let w=parseFloat(String(row[wIdx]||"0").replace(/,/g,'')), d=parseFloat(String(row[dIdx]||"0").replace(/,/g,''));
+                            if(w>0||d>0) items.push({ date:dStr, desc:"Stmt", debit:w||0, credit:d||0, matchId:null });
+                        }
+                    });
+                    appData.bankStmt=items; saveData(); updateBankUI(); alert(`Stmt: ${items.length}`);
+                } else alert('ไม่พบหัวตาราง ถอน/ฝาก');
+                input.value='';
+            }; reader.readAsBinaryString(file);
+        }
+        function runBankRecon() {
+            appData.bankGL.forEach(i=>i.matchId=null); appData.bankStmt.forEach(i=>i.matchId=null);
+            // GL Debit (In) matches Stmt Credit (In)
+            appData.bankGL.filter(g=>g.debit>0).forEach(gl=>{ let m=appData.bankStmt.find(s=>s.credit===gl.debit && s.matchId===null); if(m){gl.matchId="M";m.matchId="M";} });
+            // GL Credit (Out) matches Stmt Debit (Out)
+            appData.bankGL.filter(g=>g.credit>0).forEach(gl=>{ let m=appData.bankStmt.find(s=>s.debit===gl.credit && s.matchId===null); if(m){gl.matchId="M";m.matchId="M";} });
+            appData.bankUnmatchGL=appData.bankGL.filter(i=>i.matchId===null); appData.bankUnmatchStmt=appData.bankStmt.filter(i=>i.matchId===null);
+            saveData(); updateBankUI(); alert('Reconcile Done');
+        }
+        function updateBankUI() {
+            document.getElementById('bank-gl-status').innerText=`GL: ${appData.bankGL.length}`; document.getElementById('bank-stmt-status').innerText=`Stmt: ${appData.bankStmt.length}`;
+            const tg=document.getElementById('table-bank-gl-unmatch'); tg.innerHTML=''; appData.bankUnmatchGL.forEach(i=>tg.innerHTML+=`<tr class="border-b"><td class="p-1 text-xs">${i.date}</td><td class="p-1 text-xs">${i.ref}</td><td class="p-1 text-right text-green-600">${fmt(i.debit)}</td><td class="p-1 text-right text-red-700">${fmt(i.credit)}</td></tr>`);
+            const ts=document.getElementById('table-bank-stmt-unmatch'); ts.innerHTML=''; appData.bankUnmatchStmt.forEach(i=>ts.innerHTML+=`<tr class="border-b"><td class="p-1 text-xs">${i.date}</td><td class="p-1 text-xs">${i.desc}</td><td class="p-1 text-right text-red-600">${fmt(i.debit)}</td><td class="p-1 text-right text-green-600">${fmt(i.credit)}</td></tr>`);
+        }
+        function exportBankRecon() {
+            const wb=XLSX.utils.book_new();
+            const d1=appData.bankUnmatchGL.map(i=>({"Date":i.date,"Ref":i.ref,"Deposit(Dr)":i.debit,"Withdraw(Cr)":i.credit,"Note":"Not in Bank"}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d1), "GL_Diff");
+            const d2=appData.bankUnmatchStmt.map(i=>({"Date":i.date,"Desc":i.desc,"Withdraw(Dr)":i.debit,"Deposit(Cr)":i.credit,"Note":"Not in GL"}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d2), "Bank_Diff");
+            XLSX.writeFile(wb,"Bank_Recon_Diff.xlsx");
+        }
+
+        function fmt(n) { return n?n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'-'; }
+    </script>
+</body>
+</html>

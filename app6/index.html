@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบงบการเงินออนไลน์ (Ultimate Final)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .num-input, input.num-fmt { text-align: right; font-variant-numeric: tabular-nums; }
+        textarea { resize: vertical; }
+        .tab-btn { cursor: pointer; transition: all 0.2s; }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #1e40af; font-weight: bold; background-color: #eff6ff; }
+        .tab-inactive { color: #6b7280; background-color: white; }
+        .tab-inactive:hover { color: #374151; background-color: #f9fafb; }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 8px; }
+        
+        @media print {
+            @page { size: A4; margin: 10mm; }
+            body { background-color: white; -webkit-print-color-adjust: exact; font-size: 10pt; }
+            .no-print { display: none !important; }
+            .shadow-lg { box-shadow: none; border: none; }
+            .break-before { page-break-before: always; }
+            input, select, textarea { border: none !important; background: transparent !important; padding: 0; margin: 0; width: 100%; -webkit-appearance: none; }
+            #tab-content-tb { display: none !important; }
+            body.print-fs #tab-content-fs { display: block !important; }
+            body.print-fs #tab-content-notes { display: block !important; }
+            body.print-fs #tab-content-tax { display: block !important; }
+            body.print-change #tab-content-changes { display: block !important; }
+            body.print-dashboard #tab-content-dashboard { display: block !important; }
+            .w-col-item { width: 50% !important; } .w-col-note { width: 10% !important; text-align: center; } .w-col-amt { width: 20% !important; text-align: right; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8 text-gray-800">
+
+    <div id="loginModal" class="modal" style="display: block;">
+        <div class="modal-content relative max-w-md bg-white rounded-lg shadow-xl mt-20">
+            <h2 class="text-xl font-bold mb-6 text-center text-blue-800">🔐 กรุณาเข้าสู่ระบบ</h2>
+            <div class="space-y-4 px-4 pb-4">
+                <div><label class="block text-sm font-bold mb-1">อีเมล</label><input type="email" id="auth-email" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-bold mb-1">รหัสผ่าน</label><input type="password" id="auth-password" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"></div>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="emailLogin()" class="flex-1 bg-blue-600 text-white p-2 rounded hover:bg-blue-700 font-bold shadow">เข้าสู่ระบบ</button>
+                </div>
+                <p id="auth-msg" class="text-center text-red-500 text-sm mt-2 min-h-[20px]"></p>
+                <div class="text-xs text-gray-400 text-center mt-2 border-t pt-2">ระบบสำหรับสมาชิกเท่านั้น (Mfins Pro)</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content relative">
+            <span onclick="closeSettingsModal()" class="absolute top-2 right-4 text-2xl cursor-pointer text-gray-500 hover:text-red-500">&times;</span>
+            <h2 class="text-xl font-bold mb-4 text-blue-800">⚙️ ตั้งค่าหมวดหมู่บัญชี</h2>
+            <div class="overflow-y-auto max-h-[400px] border rounded mb-4"><table class="w-full text-sm text-left"><thead class="bg-gray-100 sticky top-0"><tr><th class="p-2 border">ชื่อหมวดหมู่</th><th class="p-2 border">กลุ่มงบ</th><th class="p-2 border text-center w-16">ลบ</th></tr></thead><tbody id="mapping-settings-body"></tbody></table></div>
+            <div class="flex gap-2 mb-6"><input type="text" id="new-map-label" placeholder="ชื่อหมวดใหม่..." class="border p-2 rounded flex-grow text-sm"><select id="new-map-group" class="border p-2 rounded text-sm w-1/3"><option value="asset-cur">สินทรัพย์หมุนเวียน</option><option value="asset-non">สินทรัพย์ไม่หมุนเวียน</option><option value="liab-cur">หนี้สินหมุนเวียน</option><option value="liab-non">หนี้สินไม่หมุนเวียน</option><option value="eq">ส่วนของผู้ถือหุ้น</option><option value="rev">รายได้</option><option value="exp">ค่าใช้จ่าย</option><option value="fin">ต้นทุนการเงิน</option><option value="tax">ค่าใช้จ่ายภาษี</option></select><button onclick="addNewMapping()" class="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600">+ เพิ่ม</button></div>
+            <div class="flex justify-between pt-4 border-t"><button onclick="resetMappingsToDefault()" class="text-red-500 text-sm hover:underline">รีเซ็ตค่าเริ่มต้น</button><button onclick="saveMappingsAndClose()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">บันทึกและปิด</button></div>
+        </div>
+    </div>
+
+    <datalist id="std-accounts"><option value="เงินสดและรายการเทียบเท่าเงินสด"><option value="ลูกหนี้การค้าและลูกหนี้อื่น"><option value="สินค้าคงเหลือ"><option value="ที่ดิน อาคาร และอุปกรณ์ (สุทธิ)"><option value="เจ้าหนี้การค้าและเจ้าหนี้อื่น"><option value="รายได้จากการขายหรือการให้บริการ"><option value="ต้นทุนขายหรือต้นทุนการให้บริการ"><option value="ค่าใช้จ่ายในการขาย"><option value="ค่าใช้จ่ายในการบริหาร"><option value="สำรองตามกฎหมาย"></datalist>
+    <datalist id="tax-add-list"><option value="ค่ารับรองส่วนที่เกินกำหนด (0.3% หรือ 10 ลบ.)"><option value="รายจ่ายต้องห้าม (ไม่มีใบเสร็จ/บิลเงินสด)"><option value="รายจ่ายส่วนตัว/เสน่หา"><option value="ภาษีเงินได้นิติบุคคล"><option value="เบี้ยปรับ/เงินเพิ่ม/ค่าปรับอาญา"><option value="ค่าของขวัญ (เกิน 2,000 บาท/คน)"><option value="ผลขาดทุนสะสมเก่า (เกิน 5 ปี)"><option value="สำรองต่างๆ (ยกเว้นเบี้ยประกัน)"><option value="ค่าเช่ารถยนต์นั่ง (ส่วนเกิน 36,000/เดือน)"><option value="ผลเสียหายจากการตีราคาทรัพย์สิน"></datalist>
+    <datalist id="tax-deduct-list"><option value="รายจ่ายเพื่อการศึกษา/ฝึกอบรม (2 เท่า)"><option value="รายจ่ายค่าจ้างผู้สูงอายุ (2 เท่า)"><option value="รายจ่ายลงทุนระบบอัตโนมัติ (2 เท่า)"><option value="เงินบริจาคสาธารณกุศล (2 เท่า)"><option value="เงินบริจาคทั่วไป (1 เท่า)"><option value="เงินปันผลที่ได้รับยกเว้น"></datalist>
+
+    <div class="max-w-6xl mx-auto bg-white p-8 shadow-lg rounded-lg border border-gray-200 hidden" id="main-container">
+        <div class="text-center mb-6 relative">
+            <h1 class="text-2xl font-bold mb-2">ระบบจัดการงบการเงิน</h1>
+            <p class="text-gray-600">กรมพัฒนาธุรกิจการค้า (DBD)</p>
+            <div class="flex justify-center items-center gap-4 mt-4 bg-yellow-50 p-2 rounded-lg border border-yellow-200 w-fit mx-auto no-print">
+                <span class="font-bold text-gray-700 text-sm">📅 ช่วงเวลา:</span>
+                <div class="flex items-center gap-2"><label class="text-xs">งวดปัจจุบัน:</label><input type="text" id="year-cur-input" value="2567" class="border rounded px-2 py-1 w-20 text-center font-bold text-blue-700 text-sm" oninput="updateYears(); debounceSave();"></div>
+                <div class="flex items-center gap-2"><label class="text-xs">งวดก่อน:</label><input type="text" id="year-prev-input" value="2566" class="border rounded px-2 py-1 w-20 text-center font-bold text-gray-600 text-sm" oninput="updateYears(); debounceSave();"></div>
+            </div>
+            <div class="absolute top-0 right-0 no-print flex flex-col items-end gap-1">
+                <div class="flex items-center space-x-1 mb-2 bg-blue-50 p-1 rounded border border-blue-100">
+                    <span id="userEmailDisplay" class="text-xs font-bold text-blue-800 mr-2 hidden"></span>
+                    <button id="btnLogout" onclick="logout()" class="hidden bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm shadow">🚪 ออก</button>
+                </div>
+                <div class="flex space-x-1 mb-1">
+                    <button onclick="openSettingsModal()" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded text-sm shadow">⚙️ ตั้งค่า</button>
+                    <button onclick="saveBackupFile()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm shadow">💾 Backup</button>
+                    <button onclick="document.getElementById('loadBackupInput').click()" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm shadow">📂 เปิดไฟล์</button>
+                    <input type="file" id="loadBackupInput" accept=".json" class="hidden" onchange="loadBackupFile(this)">
+                </div>
+                <div class="flex space-x-1">
+                    <button onclick="hardReset()" class="bg-red-800 hover:bg-red-900 text-white px-3 py-1 rounded text-sm font-bold" title="ล้างค่าทั้งหมด">⚠️ ล้างระบบ</button>
+                    <button onclick="clearForm()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">ล้างข้อมูล</button>
+                    <button onclick="exportReportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center">Excel</button>
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">PDF</button>
+                </div>
+                <div id="auto-save-status" class="text-xs text-green-600 font-bold mt-1 opacity-0 transition-opacity">✓ บันทึกแล้ว</div>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4 text-left bg-gray-50 p-4 rounded border border-gray-200 mb-6">
+            <div><label class="block text-sm font-bold">ชื่อบริษัท:</label><input type="text" id="company-name" class="w-full border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent font-bold text-lg" placeholder="ระบุชื่อกิจการ..." oninput="debounceSave()"></div>
+            <div><label class="block text-sm font-bold">เลขทะเบียน:</label><input type="text" id="company-id" class="w-full border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent" placeholder="0-0000-00000-00-0" oninput="debounceSave()"></div>
+            <div class="col-span-2 grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-bold">สิ้นสุดวันที่:</label><input type="text" id="closing-date" class="w-full border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent" placeholder="31 ธันวาคม 2567" oninput="debounceSave()"></div>
+                <div><label class="block text-sm font-bold text-blue-600">จำนวนหุ้นสามัญ (หุ้น):</label><input type="text" id="share-count" class="w-full border-b border-blue-300 focus:outline-none focus:border-blue-500 bg-transparent num-input" placeholder="10,000" oninput="fmtInput(this);calculate()"></div>
+            </div>
+        </div>
+
+        <div class="flex border-b border-gray-200 mb-6 no-print overflow-x-auto text-sm md:text-base">
+            <button onclick="switchTab('tb')" id="tab-btn-tb" class="tab-btn flex-1 py-3 px-2 text-center tab-active transition whitespace-nowrap">1. งบทดลอง</button>
+            <button onclick="switchTab('fs')" id="tab-btn-fs" class="tab-btn flex-1 py-3 px-2 text-center tab-inactive transition whitespace-nowrap">2. งบการเงิน</button>
+            <button onclick="switchTab('notes')" id="tab-btn-notes" class="tab-btn flex-1 py-3 px-2 text-center tab-inactive transition whitespace-nowrap">3. หมายเหตุฯ</button>
+            <button onclick="switchTab('tax')" id="tab-btn-tax" class="tab-btn flex-1 py-3 px-2 text-center tab-inactive transition whitespace-nowrap text-green-700 bg-green-50">4. คำนวณภาษี</button>
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn flex-1 py-3 px-2 text-center tab-inactive transition whitespace-nowrap text-purple-700 bg-purple-50 font-bold">5. รายงานผู้บริหาร</button>
+            <button onclick="switchTab('changes')" id="tab-btn-changes" class="tab-btn flex-1 py-3 px-2 text-center tab-inactive transition whitespace-nowrap text-indigo-700 bg-indigo-50 font-bold">6. งบเปลี่ยนแปลงฯ</button>
+        </div>
+
+        <div id="tab-content-tb">
+            <div class="bg-blue-50 border border-blue-200 p-4 rounded mb-4">
+                <h3 class="font-bold text-blue-800 mb-2">📥 นำเข้าไฟล์งบทดลอง:</h3>
+                <div class="flex flex-wrap items-end gap-3 bg-white p-3 rounded border border-blue-100">
+                    <div><label class="block text-xs font-bold text-red-600 mb-1">รหัสภาษา (สำคัญ!)</label><select id="encodingSelect" class="border border-red-300 rounded px-2 py-1.5 text-sm bg-red-50 font-bold text-blue-800"><option value="TIS-620" selected>Thai (TIS-620) - สำหรับ Express</option><option value="UTF-8">UTF-8 - สำหรับไฟล์ทั่วไป</option></select></div>
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm shadow">📥 เลือกไฟล์ Excel/CSV</button>
+                    <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="importFile(this)">
+                    <button onclick="downloadTemplate()" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm border">📄 ตัวอย่าง</button>
+                </div>
+            </div>
+            <table class="w-full text-sm border-collapse shadow-sm"><thead><tr class="bg-gray-700 text-white"><th class="p-3 text-left w-1/3">ชื่อบัญชี</th><th class="p-3 text-left w-1/4">หมวด (Mapping)</th><th class="p-3 text-right w-1/6 header-year-cur">CY</th><th class="p-3 text-right w-1/6 header-year-prev">PY</th><th class="p-3 text-center w-10">ลบ</th></tr></thead><tbody id="tb-body"></tbody></table>
+            <div class="mt-4"><button onclick="addTBRow(); debounceSave();" class="bg-green-500 text-white px-4 py-2 rounded shadow text-sm">+ เพิ่ม</button></div>
+        </div>
+
+        <div id="tab-content-fs" class="hidden">
+            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded mb-4 no-print flex justify-between">
+                <div class="text-sm text-yellow-800"><strong>💡 ทริค:</strong> กำไรสุทธิเชื่อมกับงบดุลแล้ว</div>
+                <div class="flex items-center gap-2"><select id="fs-encoding" class="border border-yellow-400 rounded px-2 py-1 text-xs bg-white text-yellow-800 font-bold"><option value="TIS-620" selected>Thai (TIS-620)</option><option value="UTF-8">UTF-8</option></select><button onclick="document.getElementById('fsUpdateInput').click()" class="bg-yellow-600 text-white px-3 py-1.5 rounded text-sm shadow">🔄 อัปเดตตัวเลข</button><input type="file" id="fsUpdateInput" class="hidden" onchange="importFSUpdate(this)"></div>
+            </div>
+            <div class="text-right text-sm text-gray-500 mb-2">หน่วย: บาท</div>
+            <div id="fs-print-container">
+            <h2 class="text-xl font-bold border-l-4 border-blue-600 pl-3 mb-4 bg-blue-50 py-2">งบแสดงฐานะการเงิน</h2>
+            <table class="w-full text-sm border-collapse mb-8 table-fixed" id="bs-table">
+                <thead><tr class="bg-gray-200 text-gray-700 border-t border-b"><th class="p-3 text-left w-col-item">รายการ</th><th class="p-3 text-center w-col-note text-xs">หมายเหตุ</th><th class="p-3 text-right w-col-amt header-year-cur">CY</th><th class="p-3 text-right w-col-amt header-year-prev">PY</th><th class="p-3 text-center w-8 no-print"></th></tr></thead>
+                <tbody id="balance-sheet-body">
+                    <tr><td colspan="5" class="p-2 font-bold text-blue-800 bg-gray-50">สินทรัพย์</td></tr>
+                    <tr><td colspan="5" class="p-2 pl-6 font-semibold text-gray-600">สินทรัพย์หมุนเวียน</td></tr><tbody id="group-asset-cur"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-asset-cur', 'asset-cur');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมสินทรัพย์หมุนเวียน</td><td></td><td class="p-2 text-right" id="total-asset-cur-cy">0.00</td><td class="p-2 text-right" id="total-asset-cur-py">0.00</td><td></td></tr>
+                    <tbody id="group-asset-non"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-asset-non', 'asset-non');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมสินทรัพย์ไม่หมุนเวียน</td><td></td><td class="p-2 text-right" id="total-asset-non-cy">0.00</td><td class="p-2 text-right" id="total-asset-non-py">0.00</td><td></td></tr><tr class="bg-blue-100 font-bold border-t-2"><td class="p-3 text-blue-900">รวมสินทรัพย์</td><td></td><td class="p-3 text-right text-lg" id="grand-total-asset-cy">0.00</td><td class="p-3 text-right text-lg" id="grand-total-asset-py">0.00</td><td></td></tr>
+                    <tr><td colspan="5" class="p-4"></td></tr>
+                    <tr><td colspan="5" class="p-2 font-bold text-red-800 bg-gray-50">หนี้สินและส่วนของผู้ถือหุ้น</td></tr>
+                    <tbody id="group-liab-cur"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-liab-cur', 'liab-cur');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมหนี้สินหมุนเวียน</td><td></td><td class="p-2 text-right" id="total-liab-cur-cy">0.00</td><td class="p-2 text-right" id="total-liab-cur-py">0.00</td><td></td></tr>
+                    <tbody id="group-liab-non"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-liab-non', 'liab-non');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมหนี้สินไม่หมุนเวียน</td><td></td><td class="p-2 text-right" id="total-liab-non-cy">0.00</td><td class="p-2 text-right" id="total-liab-non-py">0.00</td><td></td></tr><tr class="bg-red-50 font-bold border-t"><td class="p-2 pl-6 text-red-900">รวมหนี้สิน</td><td></td><td class="p-2 text-right" id="grand-total-liab-cy">0.00</td><td class="p-2 text-right" id="grand-total-liab-py">0.00</td><td></td></tr>
+                    <tbody id="group-eq"></tbody>
+                    <tr class="text-blue-600 bg-blue-50"><td class="p-1 pl-10 border-b border-gray-100">บวก: กำไร(ขาดทุน)สุทธิ ประจำงวด</td><td class="p-1 text-center">-</td><td class="p-1 text-right font-bold" id="bs-auto-profit-cy">0.00</td><td class="p-1 text-right font-bold" id="bs-auto-profit-py">0.00</td><td></td></tr>
+                    <tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-eq', 'eq');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมส่วนของผู้ถือหุ้น</td><td></td><td class="p-2 text-right" id="total-eq-cy">0.00</td><td class="p-2 text-right" id="total-eq-py">0.00</td><td></td></tr><tr class="bg-blue-100 font-bold border-t-2"><td class="p-3 text-blue-900">รวมหนี้สินและส่วนของผู้ถือหุ้น</td><td></td><td class="p-3 text-right text-lg" id="grand-total-le-cy">0.00</td><td class="p-3 text-right text-lg" id="grand-total-le-py">0.00</td><td></td></tr>
+                    <tr id="balance-check-row" class="hidden no-print text-white text-center font-bold"><td colspan="5" class="p-2 rounded bg-green-500" id="balance-msg"></td></tr>
+                </tbody>
+            </table>
+            <div class="break-before"></div>
+            <h2 class="text-xl font-bold border-l-4 border-green-600 pl-3 mb-4 bg-green-50 py-2">งบกำไรขาดทุน</h2>
+            <table class="w-full text-sm border-collapse table-fixed" id="pl-table">
+                <thead><tr class="bg-gray-200 text-gray-700 border-t border-b"><th class="p-3 text-left w-col-item">รายการ</th><th class="p-3 text-center w-col-note">หมายเหตุ</th><th class="p-3 text-right w-col-amt header-year-cur">CY</th><th class="p-3 text-right w-col-amt header-year-prev">PY</th><th class="p-3 text-center w-8 no-print"></th></tr></thead>
+                <tbody>
+                    <tr><td colspan="5" class="p-2 font-bold text-green-800">รายได้</td></tr><tbody id="group-rev"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-rev', 'rev');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมรายได้</td><td></td><td class="p-2 text-right" id="total-rev-cy">0.00</td><td class="p-2 text-right" id="total-rev-py">0.00</td><td></td></tr>
+                    <tr><td colspan="5" class="p-2 font-bold text-red-800">ค่าใช้จ่าย</td></tr><tbody id="group-exp"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-exp', 'exp');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="bg-yellow-50 font-bold"><td class="p-2 pl-6">รวมค่าใช้จ่าย</td><td></td><td class="p-2 text-right" id="total-exp-cy">0.00</td><td class="p-2 text-right" id="total-exp-py">0.00</td><td></td></tr>
+                    <tr class="font-bold border-t"><td class="p-2 pl-6">กำไรก่อนต้นทุนการเงิน</td><td></td><td class="p-2 text-right" id="ebit-cy">0.00</td><td class="p-2 text-right" id="ebit-py">0.00</td><td></td></tr>
+                    <tbody id="group-fin"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-fin', 'fin');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr><tr class="font-bold"><td class="p-2 pl-6">กำไรก่อนภาษี</td><td></td><td class="p-2 text-right" id="ebt-cy">0.00</td><td class="p-2 text-right" id="ebt-py">0.00</td><td></td></tr>
+                    <tbody id="group-tax"></tbody><tr><td colspan="5" class="no-print p-1 pl-10"><button onclick="addFSRow('group-tax', 'tax');saveStateToLocal();" class="text-blue-500 text-xs hover:underline">+ เพิ่มรายการ</button></td></tr>
+                    <tr class="bg-green-100 font-bold border-t-2"><td class="p-3 text-green-900">กำไร(ขาดทุน) สุทธิ</td><td></td><td class="p-3 text-right text-lg" id="net-profit-cy">0.00</td><td class="p-3 text-right text-lg" id="net-profit-py">0.00</td><td></td></tr>
+                    <tr class="border-t border-gray-400"><td class="p-3 text-blue-800 font-bold pl-6">กำไรต่อหุ้นขั้นพื้นฐาน (บาท)</td><td></td><td class="p-3 text-right font-bold text-blue-800" id="eps-cy">0.00</td><td class="p-3 text-right font-bold text-blue-800" id="eps-py">0.00</td><td></td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <div id="tab-content-notes" class="hidden">
+            <div class="space-y-4 text-sm"><div class="bg-white p-4 border rounded"><h3 class="font-bold mb-2">1. ข้อมูลทั่วไป</h3><textarea id="note-1-text" class="w-full p-2 border rounded h-20" oninput="debounceSave()"></textarea></div><div class="bg-white p-4 border rounded"><h3 class="font-bold mb-2">2. นโยบายการบัญชี</h3><textarea id="note-2-text" class="w-full p-2 border rounded h-24" oninput="debounceSave()"></textarea></div><div id="dynamic-notes-container" class="space-y-4"></div></div>
+        </div>
+
+        <div id="tab-content-tax" class="hidden">
+            <div class="bg-white p-6 border rounded shadow-sm"><div class="mb-4 p-4 bg-yellow-50 rounded"><label class="mr-4"><input type="radio" name="tax-type" value="sme" checked onchange="calculateTax();debounceSave()"> SME</label><label><input type="radio" name="tax-type" value="general" onchange="calculateTax();debounceSave()"> ทั่วไป 20%</label></div><table class="w-full text-sm border-collapse" id="tax-table"><tbody><tr><td class="p-3 font-bold">1. กำไรทางบัญชี</td><td class="p-3 text-right font-bold" id="tax-accounting-profit">0.00</td></tr><tr class="bg-gray-50"><td colspan="2" class="p-2 text-green-800 font-bold">บวก รายจ่ายต้องห้าม</td></tr><tbody id="tax-add-body"></tbody><tr><td colspan="2"><button onclick="addTaxRow('tax-add-body','tax-add-item')" class="text-blue-500 text-xs pl-4">+ เพิ่ม</button></td></tr><tr class="bg-gray-50"><td colspan="2" class="p-2 text-red-800 font-bold">หัก รายจ่ายหักได้เพิ่ม</td></tr><tbody id="tax-deduct-body"></tbody><tr><td colspan="2"><button onclick="addTaxRow('tax-deduct-body','tax-deduct-item')" class="text-blue-500 text-xs pl-4">+ เพิ่ม</button></td></tr><tr class="font-bold border-t"><td class="p-3">2. กำไรสุทธิทางภาษี</td><td class="p-3 text-right" id="tax-net-profit">0.00</td></tr><tbody id="tax-calc-steps" class="text-gray-600 bg-gray-50"></tbody><tr class="font-bold border-t-2 bg-green-100"><td class="p-3 text-right">ภาษีที่ต้องชำระ</td><td class="p-3 text-right text-lg" id="tax-payable-total">0.00</td></tr></tbody></table><div class="mt-4 text-center no-print"><button onclick="applyTaxToFS()" class="bg-green-600 text-white px-4 py-2 rounded">✅ ใช้ยอดนี้ในงบ</button></div></div>
+        </div>
+
+        <div id="tab-content-dashboard" class="hidden">
+             <div class="break-before pt-4"><div class="flex justify-between mb-6 border-b pb-4"><div><h2 class="text-2xl font-bold">รายงานผู้บริหาร</h2><p class="text-gray-500 text-sm">ประจำงวด <span class="header-year-cur"></span> vs <span class="header-year-prev"></span></p></div><div class="text-xs text-gray-400">Printed: <span id="print-date"></span></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><div class="bg-white p-4 border-l-4 border-blue-500 shadow-sm"><div class="text-gray-500 text-xs">รายได้รวม</div><div class="text-xl font-bold" id="dash-rev">0.00</div></div><div class="bg-white p-4 border-l-4 border-green-500 shadow-sm"><div class="text-gray-500 text-xs">กำไรสุทธิ</div><div class="text-xl font-bold" id="dash-profit">0.00</div></div><div class="bg-white p-4 border-l-4 border-purple-500 shadow-sm"><div class="text-gray-500 text-xs">Net Margin</div><div class="text-xl font-bold" id="dash-margin">0%</div></div><div class="bg-white p-4 border-l-4 border-yellow-500 shadow-sm"><div class="text-gray-500 text-xs">เงินสด</div><div class="text-xl font-bold" id="dash-cash">0.00</div></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div class="bg-white p-4 border rounded"><h3 class="font-bold text-center mb-2">Performance</h3><div class="h-64"><canvas id="barChart"></canvas></div></div><div class="bg-white p-4 border rounded"><h3 class="font-bold text-center mb-2">Cost Structure</h3><div class="h-64 flex justify-center"><canvas id="pieChart"></canvas></div></div></div><div class="bg-white border rounded"><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-3 text-left">Key Ratios</th><th class="p-3 text-right">CY</th><th class="p-3 text-right">PY</th><th class="p-3 text-center">Status</th></tr></thead><tbody class="divide-y"><tr><td class="p-3">Current Ratio</td><td class="p-3 text-right" id="ratio-curr-cy">-</td><td class="p-3 text-right" id="ratio-curr-py">-</td><td class="p-3 text-center" id="ratio-curr-stat"></td></tr><tr><td class="p-3">D/E Ratio</td><td class="p-3 text-right" id="ratio-de-cy">-</td><td class="p-3 text-right" id="ratio-de-py">-</td><td class="p-3 text-center" id="ratio-de-stat"></td></tr><tr><td class="p-3">ROE</td><td class="p-3 text-right" id="ratio-roe-cy">-</td><td class="p-3 text-right" id="ratio-roe-py">-</td><td class="p-3 text-center" id="ratio-roe-stat"></td></tr></tbody></table></div></div>
+        </div>
+
+        <div id="tab-content-changes" class="hidden">
+            <div class="break-before pt-4">
+                <h2 class="text-xl font-bold border-l-4 border-indigo-600 pl-3 mb-4 bg-indigo-50 py-2">งบแสดงการเปลี่ยนแปลงส่วนของผู้ถือหุ้น</h2>
+                <div class="overflow-x-auto bg-white rounded border">
+                    <table class="w-full text-sm border-collapse" id="changes-table">
+                        <thead class="bg-gray-200">
+                            <tr><th class="p-3 border text-left">รายการ</th><th class="p-3 border text-right">ทุนจดทะเบียน<br>และชำระแล้ว</th><th class="p-3 border text-right">ส่วนเกิน(ต่ำกว่า)<br>มูลค่าหุ้น</th><th class="p-3 border text-right">สำรอง<br>ตามกฎหมาย</th><th class="p-3 border text-right">กำไร(ขาดทุน)<br>สะสม</th><th class="p-3 border text-right bg-gray-300">รวม</th></tr>
+                        </thead>
+                        <tbody id="changes-body"></tbody>
+                    </table>
+                </div>
+                <div class="mt-4 p-4 bg-yellow-50 text-sm border border-yellow-200 rounded">
+                    <strong>💡 คำแนะนำ:</strong> ยอดต้นงวดจะดึงจาก "งวดปัจจุบัน (CY)" เพราะใน TB คือยอดต้นปี | กำไรสุทธิ ดึงจากงบกำไรขาดทุน
+                    <div class="mt-2 flex flex-wrap items-center gap-4">
+                        <div class="flex items-center gap-2"><label class="font-bold text-green-700">เพิ่มทุนระหว่างปี (บาท):</label><input type="text" id="input-capital-increase" class="border p-1 rounded w-32 text-right num-input bg-green-50" placeholder="0.00" onblur="fmtInput(this);renderChangesReport();debounceSave()"></div>
+                        <div class="flex items-center gap-2"><label class="font-bold text-red-700">ปันผลจ่าย (บาท):</label><input type="text" id="input-dividend" class="border p-1 rounded w-32 text-right num-input bg-red-50" placeholder="0.00" onblur="fmtInput(this);renderChangesReport();debounceSave()"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+   <script>
+        // 🔑 CONFIG (Mfins)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGjw7KNA-eMV5qbg8ul6Xh5KiVS11Gc4E",
+            authDomain: "m-finapp.firebaseapp.com",
+            projectId: "m-finapp",
+            storageBucket: "m-finapp.firebasestorage.app",
+            messagingSenderId: "409716502526",
+            appId: "1:409716502526:web:348368d14991ea51e79aaf",
+            measurementId: "G-7JHLPSVVVN"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            var auth = firebase.auth();
+            var db = firebase.firestore();
+        } catch(e) { console.error("Init Error", e); }
+
+        let currentUser = null;
+
+        // --- AUTH ---
+        function emailLogin() {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            auth.signInWithEmailAndPassword(e, p).then(() => { 
+                document.getElementById('loginModal').style.display='none'; 
+            }).catch(err => { document.getElementById('auth-msg').innerText = "Error: " + err.message; });
+        }
+        function logout() { auth.signOut().then(() => { location.reload(); }); }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                // 🟢 UNLOCK IMMEDIATELY (ไม่รอโหลด)
+                document.getElementById('loginModal').style.display='none';
+                document.getElementById('main-container').classList.remove('hidden');
+                document.getElementById('btnLogout').classList.remove('hidden');
+                document.getElementById('userEmailDisplay').innerText = user.email;
+                document.getElementById('userEmailDisplay').classList.remove('hidden');
+                
+                // โหลดข้อมูลตามมาทีหลัง (Silent Load)
+                loadFromCloud();
+            } else {
+                currentUser = null;
+                document.getElementById('main-container').classList.add('hidden');
+                document.getElementById('loginModal').style.display='block';
+            }
+        });
+
+        // --- SILENT LOAD ---
+        function loadFromCloud() {
+            if(!currentUser) return;
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    if(d.mappings) MAPPING_CATS = JSON.parse(d.mappings);
+                    if(d.appData) { restoreState(JSON.parse(d.appData)); }
+                }
+                // ถ้าโหลดเสร็จแล้ว ให้คำนวณใหม่
+                calculate(); 
+                renderChangesReport();
+                console.log("Cloud Data Loaded");
+            }).catch(e => console.error("Load Error (Ignore if offline):", e));
+        }
+
+        // --- IMPORT LOGIC (RESTORED) ---
+        function importFile(inp) {
+            const f=inp.files[0]; if(!f) return;
+            const r=new FileReader();
+            r.onload = e => {
+                const wb = XLSX.read(e.target.result, {type: f.name.endsWith('csv')?'string':'array'});
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+                
+                // Check existing rows
+                const hasData = document.querySelectorAll('#tb-body tr').length > 0;
+                let mode = 'replace';
+                if(hasData) {
+                    // Ask user: Replace All vs Update Numbers Only
+                    if(confirm("มีข้อมูลเดิมอยู่แล้ว\nกด OK = อัปเดตเฉพาะตัวเลข (Update Numbers)\nกด Cancel = ล้างและนำเข้าใหม่ (Replace All)")) {
+                        mode = 'update';
+                    }
+                }
+                
+                processImportRows(rows, mode); 
+                inp.value = '';
+            };
+            if(f.name.endsWith('csv')) r.readAsText(f, document.getElementById('encodingSelect').value);
+            else r.readAsArrayBuffer(f);
+        }
+
+        function processImportRows(rows, mode) {
+            // If replace mode, clear table first
+            if(mode === 'replace') document.getElementById('tb-body').innerHTML = '';
+            
+            let st=0; 
+            for(let i=0; i<Math.min(rows.length, 20); i++) { 
+                const str = JSON.stringify(rows[i]).toLowerCase(); 
+                if(str.includes('name') || str.includes('ชื่อ')) { st=i+1; break; } 
+            } 
+            
+            rows.slice(st).forEach(r => { 
+                if(!r || r.length < 2) return; 
+                let n=String(r[0]), c=0, p=0; 
+                if(String(r[0]).match(/^[0-9]/) && r.length >= 4) { 
+                    n=String(r[1]); 
+                    const dr=parseFloat(String(r[r.length-2]).replace(/,/g,''))||0, cr=parseFloat(String(r[r.length-1]).replace(/,/g,''))||0; 
+                    c=Math.abs(dr-cr); 
+                } else { 
+                    n=String(r[0]); 
+                    c=parseFloat(String(r[1]).replace(/,/g,''))||0; 
+                    p=parseFloat(String(r[2]).replace(/,/g,''))||0; 
+                } 
+                
+                n = n.trim();
+                if(n) {
+                    if(mode === 'update') {
+                        // Find and update existing row
+                        let found = false;
+                        document.querySelectorAll('#tb-body tr').forEach(tr => {
+                            const rowName = tr.querySelector('.tb-name').value.trim();
+                            if(rowName === n) {
+                                tr.querySelector('.tb-cy').value = fmtNum(c);
+                                if(p) tr.querySelector('.tb-py').value = fmtNum(p);
+                                found = true;
+                            }
+                        });
+                        if(!found) addTBRow(n,c,p); 
+                    } else {
+                        // Replace mode: just add
+                        addTBRow(n,c,p); 
+                    }
+                }
+            }); 
+            
+            saveStateToLocal(true); 
+            alert(mode === 'update' ? "อัปเดตตัวเลขเรียบร้อย" : "นำเข้าข้อมูลเรียบร้อย"); 
+        }
+
+        // --- CORE LOGIC ---
+        var DEFAULT_MAPPINGS = [
+            { id:'cat-cash', label:'เงินสดและรายการเทียบเท่าเงินสด', group:'asset-cur', noteTitle:'เงินสดและรายการเทียบเท่าเงินสด' },
+            { id:'cat-ar', label:'ลูกหนี้การค้าและลูกหนี้อื่น', group:'asset-cur', noteTitle:'ลูกหนี้การค้าและลูกหนี้อื่น' },
+            { id:'cat-inv', label:'สินค้าคงเหลือ', group:'asset-cur', noteTitle:'สินค้าคงเหลือ' },
+            { id:'cat-asset-cur-other', label:'สินทรัพย์หมุนเวียนอื่น', group:'asset-cur', noteTitle:'สินทรัพย์หมุนเวียนอื่น' },
+            { id:'cat-ppe', label:'ที่ดิน อาคาร และอุปกรณ์ (สุทธิ)', group:'asset-non', noteTitle:'ที่ดิน อาคาร และอุปกรณ์' },
+            { id:'cat-intangible', label:'สินทรัพย์ไม่มีตัวตน', group:'asset-non', noteTitle:'สินทรัพย์ไม่มีตัวตน' },
+            { id:'cat-asset-non-other', label:'สินทรัพย์ไม่หมุนเวียนอื่น', group:'asset-non', noteTitle:'สินทรัพย์ไม่หมุนเวียนอื่น' },
+            { id:'cat-ap', label:'เจ้าหนี้การค้าและเจ้าหนี้อื่น', group:'liab-cur', noteTitle:'เจ้าหนี้การค้าและเจ้าหนี้อื่น' },
+            { id:'cat-loan-short', label:'เงินกู้ยืมระยะสั้น', group:'liab-cur', noteTitle:'เงินกู้ยืมระยะสั้น' },
+            { id:'cat-tax-pay', label:'ภาษีเงินได้ค้างจ่าย', group:'liab-cur', noteTitle:'ภาษีเงินได้ค้างจ่าย' },
+            { id:'cat-liab-cur-other', label:'หนี้สินหมุนเวียนอื่น', group:'liab-cur', noteTitle:'หนี้สินหมุนเวียนอื่น' },
+            { id:'cat-loan-long', label:'เงินกู้ยืมระยะยาว', group:'liab-non', noteTitle:'เงินกู้ยืมระยะยาว' },
+            { id:'cat-emp-benefit', label:'ภาระผูกพันผลประโยชน์พนักงาน', group:'liab-non', noteTitle:'ภาระผูกพันผลประโยชน์พนักงาน' },
+            { id:'cat-share', label:'ทุนจดทะเบียนที่ชำระแล้ว', group:'eq', noteTitle:'ทุนเรือนหุ้น' },
+            { id:'cat-premium', label:'ส่วนเกินมูลค่าหุ้น', group:'eq', noteTitle:'ส่วนเกินมูลค่าหุ้น' },
+            { id:'cat-reserve', label:'สำรองตามกฎหมาย', group:'eq', noteTitle:'สำรองตามกฎหมาย' },
+            { id:'cat-re', label:'กำไร(ขาดทุน) สะสม', group:'eq', noteTitle:'กำไร(ขาดทุน) สะสม' },
+            { id:'cat-rev-main', label:'รายได้จากการขายหรือการให้บริการ', group:'rev', noteTitle:'รายได้จากการขายหรือการให้บริการ' },
+            { id:'cat-rev-other', label:'รายได้อื่น', group:'rev', noteTitle:'รายได้อื่น' },
+            { id:'cat-cog', label:'ต้นทุนขายหรือต้นทุนการให้บริการ', group:'exp', noteTitle:'ต้นทุนขาย' },
+            { id:'cat-exp-sell', label:'ค่าใช้จ่ายในการขาย', group:'exp', noteTitle:'ค่าใช้จ่ายในการขาย' },
+            { id:'cat-exp-admin', label:'ค่าใช้จ่ายในการบริหาร', group:'exp', noteTitle:'ค่าใช้จ่ายในการบริหาร' },
+            { id:'cat-fin', label:'ต้นทุนทางการเงิน', group:'fin', noteTitle:'ต้นทุนทางการเงิน' },
+            { id:'cat-tax', label:'ค่าใช้จ่ายภาษีเงินได้', group:'tax', noteTitle:'ค่าใช้จ่ายภาษีเงินได้' }
+        ];
+        var MAPPING_CATS = [...DEFAULT_MAPPINGS];
+        var myBarChart=null, myPieChart=null, saveTimeout;
+
+        document.addEventListener('DOMContentLoaded', () => { loadMappings(); updateYears(); initFSRows(); for(let i=0;i<3;i++) addTBRow(); addTaxRow('tax-add-body','tax-add-item','ค่ารับรองส่วนเกิน'); addTaxRow('tax-deduct-body','tax-deduct-item','รายจ่ายเพื่อการศึกษา (2 เท่า)'); calculate(); const pd = document.getElementById('print-date'); if(pd) pd.innerText = new Date().toLocaleDateString('th-TH'); document.querySelectorAll('input.num-input, input[type="number"]').forEach(input => { input.addEventListener('blur', function() { let val = parseFloat(this.value.replace(/,/g, '')); if (!isNaN(val)) { this.value = val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); } }); input.addEventListener('focus', function() { let val = this.value.replace(/,/g, ''); if(!isNaN(parseFloat(val))) this.value = val; }); }); });
+        function fmtNum(n) { if (typeof n === 'string') n = n.replace(/,/g, ''); let val = parseFloat(n); return isNaN(val) ? "0.00" : val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        function safeSetText(id, val) { const el=document.getElementById(id); if(el) el.innerText = val; }
+        function safeGetVal(id) { const el=document.getElementById(id); return el ? parseFloat(el.innerText.replace(/,/g,''))||0 : 0; }
+        function debounceSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveStateToLocal(false), 1000); }
+        function fmtInput(el) { let v=parseFloat(el.value.replace(/,/g, '')); if(!isNaN(v)) el.value=v.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); debounceSave(); }
+        function updateYears() { const y1=document.getElementById('year-cur-input').value, y2=document.getElementById('year-prev-input').value; document.querySelectorAll('.header-year-cur').forEach(e=>e.innerText=y1); document.querySelectorAll('.header-year-prev').forEach(e=>e.innerText=y2); }
+        function switchTab(t) { ['tb','fs','notes','tax','dashboard','changes'].forEach(x => { document.getElementById('tab-content-'+x).style.display = 'none'; const btn = document.getElementById('tab-btn-'+x); if(btn) btn.className = "tab-btn flex-1 py-3 px-2 text-center tab-inactive"; }); document.getElementById('tab-content-'+t).style.display = 'block'; const btn = document.getElementById('tab-btn-'+t); if(btn) { btn.className = "tab-btn flex-1 py-3 px-2 text-center tab-active"; if(t==='tax') btn.classList.add('bg-green-100','text-green-800'); if(t==='dashboard') btn.classList.add('bg-purple-100','text-purple-800'); if(t==='changes') btn.classList.add('bg-indigo-100','text-indigo-800'); } document.body.className = "bg-gray-100 min-h-screen py-8 text-gray-800"; if(t === 'fs') { document.body.classList.add('print-fs'); processTBtoFS(); } if(t === 'dashboard') { document.body.classList.add('print-dashboard'); calculate(); renderDashboard(); } if(t==='changes') { document.body.classList.add('print-change'); calculate(); renderChangesReport(); } if(t==='tax') { calculate(); const ebt = safeGetVal('ebt-cy'); safeSetText('tax-accounting-profit', fmtNum(ebt)); calculateTax(); } }
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display='none'; }
+        function addTBRow(n="",c="",p="",m="") { const tr=document.createElement('tr'); let o=`<option value="">--เลือก--</option>`; MAPPING_CATS.forEach(cat=>{ let selected = (m && cat.id === m) ? 'selected' : ''; if(!selected && !m && n && cat.label === n) selected = 'selected'; o+=`<option value="${cat.id}" ${selected}>${cat.label}</option>`; }); tr.innerHTML=`<td class="p-2"><input type="text" value="${n}" class="w-full p-2 border rounded tb-name" oninput="debounceSave()"></td><td class="p-2"><select class="w-full p-2 border rounded tb-map text-sm" onchange="debounceSave()">${o}</select></td><td class="p-2"><input type="text" value="${c?fmtNum(c):''}" onblur="fmtInput(this)" onfocus="this.value=this.value.replace(/,/g,'')" class="w-full p-2 border rounded text-right tb-cy num-input"></td><td class="p-2"><input type="text" value="${p?fmtNum(p):''}" onblur="fmtInput(this)" onfocus="this.value=this.value.replace(/,/g,'')" class="w-full p-2 border rounded text-right tb-py num-input"></td><td class="p-2 text-center"><button onclick="this.closest('tr').remove();calculate();debounceSave()" class="text-red-500 font-bold">×</button></td>`; document.getElementById('tb-body').appendChild(tr); }
+        function initFSRows() { ['asset-cur','asset-non','liab-cur','liab-non','eq','rev','exp','fin','tax'].forEach(g => { const el = document.getElementById(`group-${g}`); if(el) el.innerHTML = ''; }); MAPPING_CATS.forEach(m => { const tbody = document.getElementById(`group-${m.group}`); if(tbody) addFSRow(`group-${m.group}`, m.group, m.label, '', '', m.id); }); }
+        function addFSRow(tid,grp,n="",c="",p="",mid="",note="") { const tr=document.createElement('tr'); tr.setAttribute('data-map-id',mid); tr.innerHTML=`<td class="p-1 pl-10 border-b border-gray-100"><input type="text" value="${n}" list="std-accounts" oninput="debounceSave()" class="w-full bg-transparent focus:outline-none border-b border-transparent focus:border-blue-400"></td><td class="p-1 text-center"><input type="text" value="${note}" oninput="debounceSave()" class="w-8 text-center text-xs p-1 border-none focus:ring-1" placeholder="-"></td><td class="p-1"><input type="text" value="${c?fmtNum(c):''}" onblur="fmtInput(this)" onfocus="this.value=this.value.replace(/,/g,'')" class="w-full p-1 border rounded text-right num-input fs-cy" data-group="${grp}-cy" oninput="calculate()"></td><td class="p-1"><input type="text" value="${p?fmtNum(p):''}" onblur="fmtInput(this)" onfocus="this.value=this.value.replace(/,/g,'')" class="w-full p-1 border rounded text-right num-input fs-py" data-group="${grp}-py" oninput="calculate()"></td><td class="p-1 text-center no-print"><button onclick="this.closest('tr').remove();calculate();debounceSave()" class="text-red-400 font-bold">×</button></td>`; const el = document.getElementById(tid); if(el) el.appendChild(tr); }
+        function processTBtoFS() { document.querySelectorAll('tr[data-map-id] input.fs-cy').forEach(e=>e.value=''); document.querySelectorAll('tr[data-map-id] input.fs-py').forEach(e=>e.value=''); const agg={}, notes={}; document.querySelectorAll('#tb-body tr').forEach(r=>{ const n=r.querySelector('.tb-name').value, m=r.querySelector('.tb-map').value; const c=parseFloat(r.querySelector('.tb-cy').value.replace(/,/g,''))||0, p=parseFloat(r.querySelector('.tb-py').value.replace(/,/g,''))||0; if(m && n) { if(!agg[m]) agg[m]={cy:0,py:0}; agg[m].cy+=c; agg[m].py+=p; if(Math.abs(c)>0.001||Math.abs(p)>0.001) { if(!notes[m]) notes[m]=[]; notes[m].push({n,c,p}); } } }); for(const [id,v] of Object.entries(agg)) { const r=document.querySelector(`tr[data-map-id="${id}"]`); if(r) { const m=MAPPING_CATS.find(x=>x.id===id); let f=1; if(m && ['liab-cur','liab-non','eq','rev'].some(g=>m.group.startsWith(g)||m.group===g)) f=-1; r.querySelector('.fs-cy').value=fmtNum(v.cy*f); r.querySelector('.fs-py').value=fmtNum(v.py*f); } } const cnt=document.getElementById('dynamic-notes-container'); if(cnt) { cnt.innerHTML=''; let nn=3; MAPPING_CATS.forEach(m => { const id = m.id; const d = notes[id]; if(d && d.length) { let f=1; if(['liab-cur','liab-non','eq','rev'].some(g=>m.group.startsWith(g)||m.group===g)) f=-1; let tC=0, tP=0, h=''; d.forEach(i=>{ const vc=i.c*f, vp=i.p*f; tC+=vc; tP+=vp; h+=`<tr><td class="py-1 border-b pl-2">${i.n}</td><td class="py-1 border-b text-right font-mono">${fmtNum(vc)}</td><td class="py-1 border-b text-right font-mono">${fmtNum(vp)}</td></tr>`; }); cnt.insertAdjacentHTML('beforeend', `<div class="bg-white p-6 border rounded shadow-sm break-inside-avoid"><h3 class="font-bold text-lg mb-3">${nn}. ${m.noteTitle}</h3><table class="w-full text-sm"><thead><tr class="bg-gray-50 border-b-2"><th class="text-left w-1/2">รายการ</th><th class="text-right w-1/4">${document.getElementById('year-cur-input').value}</th><th class="text-right w-1/4">${document.getElementById('year-prev-input').value}</th></tr></thead><tbody>${h}</tbody><tfoot><tr class="font-bold border-t-2"><td class="text-right pr-4">รวม</td><td class="text-right border-b-4 border-double">${fmtNum(tC)}</td><td class="text-right border-b-4 border-double">${fmtNum(tP)}</td></tr></tfoot></table></div>`); nn++; } }); } calculate(); debounceSave(); }
+        function calculate() { try { const val = el => parseFloat(el.value.replace(/,/g,''))||0; const sum = s => { let t=0; document.querySelectorAll(`input[data-group$="${s}"]`).forEach(i => t+=val(i)); return t; }; ['cy','py'].forEach(y => { const rev = sum(`rev-${y}`), exp = sum(`exp-${y}`), fin = sum(`fin-${y}`), tax = sum(`tax-${y}`); safeSetText(`total-rev-${y}`, fmtNum(rev)); safeSetText(`total-exp-${y}`, fmtNum(exp)); safeSetText(`ebit-${y}`, fmtNum(rev-exp)); safeSetText(`ebt-${y}`, fmtNum(rev-exp-fin)); const netProfit = rev-exp-fin-tax; safeSetText(`net-profit-${y}`, fmtNum(netProfit)); safeSetText(`bs-auto-profit-${y}`, fmtNum(netProfit)); const ac = sum(`asset-cur-${y}`), an = sum(`asset-non-${y}`), lc = sum(`liab-cur-${y}`), ln = sum(`liab-non-${y}`); const e_input = sum(`eq-${y}`); const e_total = e_input + netProfit; const ta = ac+an, tl=lc+ln, tle=tl+e_total; safeSetText(`total-asset-cur-${y}`, fmtNum(ac)); safeSetText(`total-asset-non-${y}`, fmtNum(an)); safeSetText(`grand-total-asset-${y}`, fmtNum(ta)); safeSetText(`total-liab-cur-${y}`, fmtNum(lc)); safeSetText(`total-liab-non-${y}`, fmtNum(ln)); safeSetText(`grand-total-liab-${y}`, fmtNum(tl)); safeSetText(`total-eq-${y}`, fmtNum(e_total)); safeSetText(`grand-total-le-${y}`, fmtNum(tle)); const shares = parseFloat(document.getElementById('share-count').value.replace(/,/g,''))||0; if(shares > 0) safeSetText(`eps-${y}`, fmtNum(netProfit/shares)); if(y==='cy') { const msg = document.getElementById('balance-msg'), row = document.getElementById('balance-check-row'); if(msg && row) { row.classList.remove('hidden'); if(Math.abs(ta - tle) < 0.01) { msg.className = "p-2 rounded bg-green-500"; msg.innerText = "✓ งบดุลลงตัว"; } else { msg.className = "p-2 rounded bg-red-500"; msg.innerText = `⚠️ ไม่ลงตัว (ผลต่าง: ${fmtNum(ta-tle)})`; } } } }); } catch(e) { console.error(e); } }
+        
+        // --- UPDATED LOGIC: Use CY for Beginning Balance in Changes Report + Capital Increase ---
+        function renderChangesReport() { 
+            const table = document.getElementById('changes-body'); table.innerHTML = ''; 
+            
+            // Beginning Balance (From CY TB)
+            const getValFromMap = (mapId) => { 
+                let v = 0; 
+                document.querySelectorAll(`tr[data-map-id="${mapId}"] input[data-group="eq-cy"]`).forEach(i => v += parseFloat(i.value.replace(/,/g,''))||0); 
+                return v; 
+            }; 
+            const begShare = getValFromMap('cat-share'); 
+            const begPremium = getValFromMap('cat-premium'); 
+            const begReserve = getValFromMap('cat-reserve'); 
+            const begRE = getValFromMap('cat-re'); 
+            const begTotal = begShare + begPremium + begReserve + begRE; 
+            
+            // Adjustments
+            const netProfit = parseFloat(document.getElementById('net-profit-cy').innerText.replace(/,/g,''))||0; 
+            const dividend = parseFloat(document.getElementById('input-dividend').value.replace(/,/g,''))||0; 
+            const capInc = parseFloat(document.getElementById('input-capital-increase').value.replace(/,/g,''))||0; 
+            
+            // Ending Balance
+            const endShare = begShare + capInc; // Capital Increase adds here
+            const endPremium = begPremium; 
+            const endReserve = begReserve; 
+            const endRE = begRE + netProfit - dividend; 
+            const endTotal = endShare + endPremium + endReserve + endRE; 
+            
+            const row = (label, c1, c2, c3, c4, c5, css='') => `<tr class="${css}"><td class="p-3 border-b border-r">${label}</td><td class="p-3 border-b text-right">${fmtNum(c1)}</td><td class="p-3 border-b text-right">${fmtNum(c2)}</td><td class="p-3 border-b text-right">${fmtNum(c3)}</td><td class="p-3 border-b text-right">${fmtNum(c4)}</td><td class="p-3 border-b text-right font-bold bg-gray-100">${fmtNum(c5)}</td></tr>`; 
+            
+            let html = row('ยอดคงเหลือต้นงวด (ตามงบทดลอง)', begShare, begPremium, begReserve, begRE, begTotal); 
+            
+            // Insert Capital Increase Row if value > 0
+            if(capInc > 0) {
+                html += row('เพิ่มทุนระหว่างปี', capInc, 0, 0, 0, capInc, 'text-blue-600');
+            }
+
+            html += row('บวก: กำไร(ขาดทุน)สุทธิ ประจำงวด', 0, 0, 0, netProfit, netProfit, 'text-green-600'); 
+            html += row('หัก: เงินปันผลจ่าย', 0, 0, 0, -dividend, -dividend, 'text-red-600'); 
+            html += row('ยอดคงเหลือปลายงวด', endShare, endPremium, endReserve, endRE, endTotal, 'font-bold bg-indigo-50 border-t-2 border-indigo-300'); 
+            
+            table.innerHTML = html; 
+        }
+
+        function calculateTax() { const acct = safeGetVal('tax-accounting-profit'); let add=0; document.querySelectorAll('.tax-add-item').forEach(i=>add+=parseFloat(i.value.replace(/,/g,''))||0); let ded=0; document.querySelectorAll('.tax-deduct-item').forEach(i=>ded+=parseFloat(i.value.replace(/,/g,''))||0); let net = acct + add - ded; safeSetText('tax-net-profit', fmtNum(net)); let tax = 0; if(net > 0) { const type = document.querySelector('input[name="tax-type"]:checked')?.value || 'sme'; if(type === 'sme') { if(net > 300000) tax += Math.min(net-300000, 2700000) * 0.15; if(net > 3000000) tax += (net-3000000) * 0.20; } else { tax = net * 0.20; } } safeSetText('tax-payable-total', fmtNum(tax)); }
+        function addTaxRow(id, cls, n="", v="") { const tr = document.createElement('tr'); let listAttr = cls.includes('add') ? 'list="tax-add-list"' : 'list="tax-deduct-list"'; tr.innerHTML = `<td class="p-2 pl-8"><input type="text" class="w-full bg-transparent border-b" ${listAttr} value="${n}" placeholder="พิมพ์หรือเลือกรายการ..." oninput="debounceSave()"></td><td class="p-2 flex items-center"><input type="text" value="${v?fmtNum(v):'0.00'}" onblur="fmtInput(this)" onfocus="this.value=this.value.replace(/,/g,'')" class="w-full text-right border rounded p-1 ${cls} num-input" onchange="calculateTax()"><button onclick="this.closest('tr').remove();calculateTax();debounceSave()" class="text-red-500 ml-2 no-print font-bold">×</button></td>`; document.getElementById(id).appendChild(tr); }
+        function applyTaxToFS() { const t = parseFloat(document.getElementById('tax-payable-total').innerText.replace(/,/g,'')); const inputs = document.querySelectorAll('#group-tax input.fs-cy'); if(inputs.length) { inputs[0].value = fmtNum(t); calculate(); debounceSave(); switchTab('fs'); } else alert('กรุณาเพิ่มรายการค่าใช้จ่ายภาษีในงบก่อน'); }
+        function downloadTemplate() { const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet([["ชื่อบัญชี","ปีปัจจุบัน","ปีก่อน"],["เงินสด",50000,45000]]); XLSX.utils.book_append_sheet(wb,ws,"Template"); XLSX.utils.writeFile(wb,"Template.xlsx"); }
+        function clearForm() { if(confirm('Clear?')) { localStorage.removeItem('fs_app_state'); location.reload(); } }
+        function hardReset() { if(confirm('⚠️ ยืนยันล้างค่าทั้งหมด? ข้อมูลจะหายไปถาวร')) { localStorage.removeItem('fs_app_state'); localStorage.removeItem('fs_custom_mappings'); location.reload(); } }
+        function getAppStateFromDOM() {
+             const st = { company: { name:document.getElementById('company-name').value, id:document.getElementById('company-id').value, date:document.getElementById('closing-date').value, y1:document.getElementById('year-cur-input').value, y2:document.getElementById('year-prev-input').value }, share: document.getElementById('share-count').value.replace(/,/g, ''), tb: [], fs: [], notes: { n1:document.getElementById('note-1-text').value, n2:document.getElementById('note-2-text').value }, tax: { add:[], deduct:[], type:document.querySelector('input[name="tax-type"]:checked')?.value||'sme' }, dividend: document.getElementById('input-dividend').value.replace(/,/g,''), capitalIncrease: document.getElementById('input-capital-increase').value.replace(/,/g,'') }; // Save Capital Increase
+            document.querySelectorAll('#tb-body tr').forEach(r=>{ st.tb.push({ n:r.querySelector('.tb-name').value, m: r.querySelector('.tb-map').value, c:r.querySelector('.tb-cy').value.replace(/,/g, ''), p:r.querySelector('.tb-py').value.replace(/,/g, '') }); });
+            document.getElementById('tax-add-body').querySelectorAll('tr').forEach(row => { const inputs = row.querySelectorAll('input'); if(inputs.length >= 2) st.tax.add.push({n: inputs[0].value, v: inputs[1].value.replace(/,/g, '')}); });
+            document.getElementById('tax-deduct-body').querySelectorAll('tr').forEach(row => { const inputs = row.querySelectorAll('input'); if(inputs.length >= 2) st.tax.deduct.push({n: inputs[0].value, v: inputs[1].value.replace(/,/g, '')}); });
+            return st;
+        }
+        function saveStateToLocal(force = false) {
+            try { 
+                const st = getAppStateFromDOM(); localStorage.setItem('fs_app_state', JSON.stringify(st));
+                const s=document.getElementById('auto-save-status'); if(s){ s.style.opacity='1'; setTimeout(()=>s.style.opacity='0',2000); }
+                if (currentUser) { db.collection('users').doc(currentUser.uid).set({ updatedAt: firebase.firestore.FieldValue.serverTimestamp(), appData: JSON.stringify(st), mappings: JSON.stringify(MAPPING_CATS) }, { merge: true }); }
+                if(force) alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+            } catch(e) {}
+        }
+        function loadStateFromLocal() { const s=localStorage.getItem('fs_app_state'); if(!s) return false; try{ restoreState(JSON.parse(s)); return true; }catch(e){return false;} }
+        function saveBackupFile() { const appData = getAppStateFromDOM(); const b = new Blob([JSON.stringify({version: "2.1", timestamp: new Date().toISOString(), appData: appData, customMap: MAPPING_CATS})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup_${appData.company.name || 'Financial'}.json`; a.click(); }
+        function loadBackupFile(i) { const f=i.files[0]; if(!f)return; const r=new FileReader(); r.onload = e => { try { const d = JSON.parse(e.target.result); if(d.customMap) { MAPPING_CATS = d.customMap; saveMappings(); } initFSRows(); restoreState(d.appData || d); saveStateToLocal(true); alert('เรียกคืนข้อมูลสำเร็จ!'); } catch(x) { alert('ไฟล์ไม่ถูกต้อง'); } }; r.readAsText(f); i.value=''; }
+        function restoreState(s) {
+            if(s.company) { document.getElementById('company-name').value=s.company.name; document.getElementById('company-id').value=s.company.id; document.getElementById('closing-date').value=s.company.date; document.getElementById('year-cur-input').value=s.company.y1; document.getElementById('year-prev-input').value=s.company.y2; updateYears(); }
+            if(s.share) document.getElementById('share-count').value = fmtNum(s.share);
+            if(s.dividend) document.getElementById('input-dividend').value = fmtNum(s.dividend);
+            if(s.capitalIncrease) document.getElementById('input-capital-increase').value = fmtNum(s.capitalIncrease); // Restore Capital Increase
+            document.getElementById('tb-body').innerHTML=''; if(s.tb && s.tb.length) s.tb.forEach(r => addTBRow(r.n, r.c, r.p, r.m)); else for(let i=0;i<3;i++) addTBRow();
+            initFSRows(); processTBtoFS();
+            if(s.notes) { document.getElementById('note-1-text').value=s.notes.n1; document.getElementById('note-2-text').value=s.notes.n2; }
+            const taxType = s.tax ? s.tax.type : 'sme'; const rad = document.querySelector(`input[name="tax-type"][value="${taxType}"]`); if(rad) rad.checked=true;
+            document.getElementById('tax-add-body').innerHTML=''; if(s.tax && s.tax.add && s.tax.add.length) s.tax.add.forEach(i=>addTaxRow('tax-add-body','tax-add-item',i.n,i.v)); else addTaxRow('tax-add-body','tax-add-item','ค่ารับรองส่วนเกิน');
+            document.getElementById('tax-deduct-body').innerHTML=''; if(s.tax && s.tax.deduct && s.tax.deduct.length) s.tax.deduct.forEach(i=>addTaxRow('tax-deduct-body','tax-deduct-item',i.n,i.v)); else addTaxRow('tax-deduct-body','tax-deduct-item','รายจ่ายเพื่อการศึกษา (2 เท่า)');
+            processTBtoFS(); renderChangesReport(); 
+        }
+        function importFSUpdate(inp) { const f=inp.files[0]; if(!f) return; const r=new FileReader(); r.onload = e => { const wb = XLSX.read(e.target.result, {type:f.name.endsWith('csv')?'string':'array'}); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1}); updateFSRows(rows); inp.value=''; }; if(f.name.endsWith('csv')) r.readAsText(f, document.getElementById('fs-encoding').value); else r.readAsArrayBuffer(f); }
+        function updateFSRows(rows) { let st=0, colName=0, colCY=2, colPY=3; for(let i=0;i<Math.min(rows.length,20);i++){ if(JSON.stringify(rows[i]).includes('รายการ')){ st=i+1; rows[i].forEach((c,idx)=>{if(String(c).includes('รายการ'))colName=idx;if(String(c).includes('หมายเหตุ')){colCY=idx+1;colPY=idx+2;}}); break;}} let cnt=0; rows.slice(st).forEach(r=>{ const name=String(r[colName]||'').trim(); if(name){ document.querySelectorAll('input[list="std-accounts"]').forEach(inp=>{ if(inp.value.trim()===name){ const row=inp.closest('tr'); if(row.querySelector('.fs-cy')){ row.querySelector('.fs-cy').value=fmtNum(r[colCY]); row.querySelector('.fs-py').value=fmtNum(r[colPY]); cnt++; } } }); } }); saveStateToLocal(true); alert(`Updated ${cnt} items`); calculate(); }
+        function loadMappings() { const s=localStorage.getItem('fs_custom_mappings'); if(s) try{MAPPING_CATS=JSON.parse(s);}catch(e){} }
+        function saveMappings() { localStorage.setItem('fs_custom_mappings', JSON.stringify(MAPPING_CATS)); }
+        function openSettingsModal() { const tbody = document.getElementById('mapping-settings-body'); tbody.innerHTML=''; MAPPING_CATS.forEach((m,i)=>{ const tr = document.createElement('tr'); tr.innerHTML=`<td class="p-2 border"><input type="text" value="${m.label}" class="w-full border p-1 rounded" onchange="MAPPING_CATS[${i}].label=this.value;MAPPING_CATS[${i}].noteTitle=this.value"></td><td class="p-2 border"><select class="w-full border p-1 rounded" onchange="MAPPING_CATS[${i}].group=this.value">${['asset-cur','asset-non','liab-cur','liab-non','eq','rev','exp','fin','tax'].map(v=>`<option value="${v}" ${m.group===v?'selected':''}>${v}</option>`).join('')}</select></td><td class="p-2 border text-center"><button onclick="MAPPING_CATS.splice(${i},1);saveMappings();openSettingsModal()" class="text-red-500 font-bold">×</button></td>`; tbody.appendChild(tr); }); document.getElementById('settingsModal').style.display='block'; }
+        function addNewMapping() { const l=document.getElementById('new-map-label').value.trim(), g=document.getElementById('new-map-group').value; if(!l) return; MAPPING_CATS.push({id:'c-'+Date.now(), label:l, group:g, noteTitle:l}); saveMappings(); openSettingsModal(); }
+        function resetMappingsToDefault() { if(confirm('รีเซ็ต?')) { MAPPING_CATS=JSON.parse(JSON.stringify(DEFAULT_MAPPINGS)); openSettingsModal(); } }
+        function saveMappingsAndClose() { saveMappings(); document.getElementById('settingsModal').style.display='none'; initFSRows(); renderTBMappingOptions(); }
+        function renderTBMappingOptions() { document.querySelectorAll('.tb-map').forEach(s => { const v=s.value; s.innerHTML=`<option value="">--เลือก--</option>`+MAPPING_CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join(''); s.value=v; }); }
+        function exportReportToExcel() {
+            saveStateToLocal(true); const wb = XLSX.utils.book_new(); const companyName = document.getElementById('company-name').value || 'Financial_Report';
+            const beautifySheet = (ws) => { ws['!cols'] = [{wch:50},{wch:15},{wch:20},{wch:20},{wch:10}]; const range = XLSX.utils.decode_range(ws['!ref']); for(let R=range.s.r;R<=range.e.r;++R){ for(let C=range.s.c;C<=range.e.c;++C){ const cell=ws[XLSX.utils.encode_cell({r:R,c:C})]; if(!cell) continue; cell.s={font:{name:"Arial",sz:11},alignment:{vertical:"center",wrapText:true},border:{top:{style:"thin",color:{rgb:"E0E0E0"}},bottom:{style:"thin",color:{rgb:"E0E0E0"}}}}; if(cell.t==='n'){ cell.z="#,##0.00"; cell.s.alignment.horizontal="right"; } if(R<2||(cell.v&&String(cell.v).includes("รวม"))){ cell.s.font.bold=true; cell.s.fill={fgColor:{rgb:"F3F4F6"}}; } if(cell.v&&(String(cell.v)==="สินทรัพย์"||String(cell.v)==="หนี้สินและส่วนของผู้ถือหุ้น")){ cell.s.font.bold=true; cell.s.font.color={rgb:"1E40AF"}; } } } };
+            const getTbl=(id)=>{ const t=document.getElementById(id); if(!t)return[]; const rows=[]; if(t.querySelector('thead')) { const h=[]; t.querySelectorAll('thead th').forEach(x=>h.push(x.innerText)); rows.push(h); } t.querySelectorAll('tbody tr, tfoot tr').forEach(tr=>{ if(tr.style.display!=='none'&&!tr.classList.contains('hidden')){ const r=[]; tr.querySelectorAll('td').forEach(td=>{ const inp=td.querySelector('input'), sel=td.querySelector('select'); if(inp){ if(inp.type==='number'||inp.classList.contains('num-input')) r.push(parseFloat(inp.value.replace(/,/g,''))||0); else r.push(inp.value); } else if(sel) r.push(sel.options[sel.selectedIndex].text); else r.push(td.textContent.trim()); if(td.id && td.id.includes('bs-auto-profit')) r.push(parseFloat(td.innerText.replace(/,/g,''))||0); }); if(r.length) rows.push(r); } }); return rows; };
+            const fsData=[[companyName],["งบแสดงฐานะการเงิน"],[]]; getTbl('bs-table').forEach(r=>fsData.push(r)); fsData.push([],["งบกำไรขาดทุน"]); getTbl('pl-table').forEach(r=>fsData.push(r)); const wsFS=XLSX.utils.aoa_to_sheet(fsData); beautifySheet(wsFS); XLSX.utils.book_append_sheet(wb, wsFS, "งบการเงิน");
+            const notesData=[[companyName],["หมายเหตุประกอบงบการเงิน"],[],["1. ข้อมูลทั่วไป"],[document.getElementById('note-1-text').value],[],["2. นโยบายการบัญชี"],[document.getElementById('note-2-text').value],[]];
+            document.querySelectorAll('#dynamic-notes-container .bg-white').forEach(div=>{ const h=div.querySelector('h3'); if(h) notesData.push([h.innerText]); const t=div.querySelector('table'); if(t){ t.querySelectorAll('tr').forEach(tr=>{ const r=[]; tr.querySelectorAll('th, td').forEach((td,i)=>{ if(i>0) r.push(parseFloat(td.innerText.replace(/,/g,''))||0); else r.push(td.innerText); }); notesData.push(r); }); notesData.push([]); } });
+            const wsNotes=XLSX.utils.aoa_to_sheet(notesData); beautifySheet(wsNotes); XLSX.utils.book_append_sheet(wb, wsNotes, "หมายเหตุ");
+            const taxData=[["การคำนวณภาษีเงินได้นิติบุคคล (ภ.ง.ด. 50)"],[]]; getTbl('tax-table').forEach(r=>taxData.push(r)); const wsTax=XLSX.utils.aoa_to_sheet(taxData); beautifySheet(wsTax); XLSX.utils.book_append_sheet(wb, wsTax, "คำนวณภาษี");
+            
+            // Export Changes Report
+            const changeData = [[companyName],["งบแสดงการเปลี่ยนแปลงส่วนของผู้ถือหุ้น"],[]]; getTbl('changes-table').forEach(r=>changeData.push(r)); const wsChange=XLSX.utils.aoa_to_sheet(changeData); beautifySheet(wsChange); XLSX.utils.book_append_sheet(wb, wsChange, "งบเปลี่ยนแปลงทุน");
+
+            XLSX.writeFile(wb, `${companyName}_งบการเงิน.xlsx`);
+        }
+        function renderDashboard() {
+            const getVal = id => safeGetVal(id);
+            const revCY=getVal('total-rev-cy'), netCY=getVal('net-profit-cy');
+            document.getElementById('dash-rev').innerText = fmtNum(revCY); document.getElementById('dash-profit').innerText = fmtNum(netCY);
+            document.getElementById('dash-margin').innerText = (revCY ? (netCY/revCY)*100 : 0).toFixed(2)+'%';
+            let cash=0; document.querySelectorAll('tr[data-map-id="cat-cash"] input.fs-cy').forEach(i=>cash+=parseFloat(i.value.replace(/,/g,''))||0); document.getElementById('dash-cash').innerText = fmtNum(cash);
+            const ctxBar = document.getElementById('barChart'); if(ctxBar) { if(window.myBarChart) window.myBarChart.destroy(); window.myBarChart = new Chart(ctxBar, { type:'bar', data: { labels:['รายได้','ค่าใช้จ่าย','กำไร'], datasets:[{label:'CY',data:[revCY, getVal('total-exp-cy'), netCY],backgroundColor:'#3b82f6'}] }, options:{responsive:true,maintainAspectRatio:false} }); }
+            const ctxPie = document.getElementById('pieChart'); if(ctxPie) { if(window.myPieChart) window.myPieChart.destroy(); let cCog=0; document.querySelectorAll('#group-exp input.fs-cy').forEach(i=> cCog += parseFloat(i.value.replace(/,/g,''))||0); window.myPieChart = new Chart(ctxPie, { type:'doughnut', data:{labels:['ค่าใช้จ่ายรวม'],datasets:[{data:[cCog],backgroundColor:['#f59e0b']}]}, options:{responsive:true,maintainAspectRatio:false} }); }
+        }
+   </script>
+</body>
+</html>

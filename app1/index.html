@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Report V.9 (M-Reports)</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; font-size: 14px; }
+        .tab-btn { @apply px-4 py-3 font-bold cursor-pointer text-gray-500 hover:text-gray-700 transition-colors flex-1 text-center bg-gray-100 border-r border-gray-200; }
+        .tab-active { @apply text-blue-700 bg-white border-t-4 border-t-blue-600 shadow-sm; }
+        
+        .sticky-col { position: sticky; left: 0; z-index: 20; background-color: white; border-right: 1px solid #e2e8f0; }
+        .sticky-kpi { position: sticky; top: 0; z-index: 40; background-color: rgba(255,255,255,0.95); backdrop-filter: blur(5px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; }
+        .table-container { overflow-x: auto; max-height: 72vh; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+        
+        /* Helpers */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="p-4 text-slate-800 min-h-screen flex flex-col">
+
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4">
+        <div class="flex flex-wrap justify-between items-center gap-4">
+            <div class="flex-1 min-w-[300px]">
+                <div class="flex items-center gap-3 mb-2">
+                    <a href="../portal/index.html" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs font-bold transition">
+                        <i class="fa-solid fa-arrow-left"></i> กลับเมนู
+                    </a>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-blue-600"></i> Management Report
+                </h1>
+                <input type="text" id="company-name" class="w-full text-gray-500 font-bold focus:outline-none mt-1 text-lg placeholder-gray-300" placeholder="ระบุชื่อบริษัท..." value="บริษัท ตัวอย่าง จำกัด" oninput="autoSave()">
+            </div>
+            
+            <div class="flex items-center gap-2 flex-wrap justify-end">
+                <div class="flex items-center gap-2 bg-blue-50 p-1.5 rounded-lg border border-blue-100 mr-2">
+                    <button onclick="document.getElementById('tb-file').click()" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 font-bold text-sm flex items-center gap-2 transition-transform active:scale-95">
+                        <i class="fa-solid fa-file-import"></i> นำเข้า Express
+                    </button>
+                    <input type="file" id="tb-file" class="hidden" accept=".csv,.xlsx,.xls" onchange="importExpress(this)">
+                </div>
+                
+                <div class="flex gap-1">
+                    <button onclick="saveFile()" class="bg-white border text-gray-700 px-3 py-2 rounded-md hover:bg-gray-50 text-sm font-medium shadow-sm" title="Backup"><i class="fa-solid fa-download"></i></button>
+                    <button onclick="resetAll()" class="text-red-300 hover:text-red-500 px-3"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-t-xl border-b border-gray-200 flex shadow-sm overflow-x-auto mx-1">
+        <div onclick="switchTab('dash')" id="tab-dash" class="tab-btn rounded-tl-xl tab-active"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
+        <div onclick="switchTab('pnl')" id="tab-pnl" class="tab-btn"><i class="fa-solid fa-money-bill-trend-up"></i> งบกำไรขาดทุน</div>
+        <div onclick="switchTab('bs')" id="tab-bs" class="tab-btn"><i class="fa-solid fa-scale-balanced"></i> งบดุล</div>
+        <div onclick="switchTab('settings')" id="tab-settings" class="tab-btn rounded-tr-xl text-gray-400"><i class="fa-solid fa-sliders"></i> ตั้งค่า</div>
+    </div>
+
+    <div class="bg-white p-6 rounded-b-xl shadow-sm border border-gray-200 min-h-[600px] mx-1 mb-10 relative">
+
+        <div id="view-dash" class="tab-content">
+            <div class="sticky-kpi -mx-6 px-6 py-4 mb-6 border-b border-gray-100">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="flex items-center gap-3"><div class="p-3 rounded-full bg-blue-100 text-blue-600"><i class="fa-solid fa-wallet text-xl"></i></div><div><div class="text-[10px] text-gray-500 uppercase font-bold">รายได้รวม</div><div class="text-xl font-bold text-blue-700" id="dash-rev">0.00</div></div></div>
+                    <div class="flex items-center gap-3"><div class="p-3 rounded-full bg-green-100 text-green-600"><i class="fa-solid fa-sack-dollar text-xl"></i></div><div><div class="text-[10px] text-gray-500 uppercase font-bold">กำไรสุทธิ</div><div class="text-xl font-bold text-green-700" id="dash-net">0.00</div></div></div>
+                    <div class="flex items-center gap-3"><div class="p-3 rounded-full bg-orange-100 text-orange-600"><i class="fa-solid fa-file-invoice-dollar text-xl"></i></div><div><div class="text-[10px] text-gray-500 uppercase font-bold">ค่าใช้จ่าย</div><div class="text-xl font-bold text-orange-700" id="dash-exp">0.00</div></div></div>
+                    <div class="flex items-center gap-3"><div class="p-3 rounded-full bg-purple-100 text-purple-600"><i class="fa-solid fa-vault text-xl"></i></div><div><div class="text-[10px] text-gray-500 uppercase font-bold">เงินสด</div><div class="text-xl font-bold text-purple-700" id="dash-cash">0.00</div></div></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
+                <div class="border p-4 rounded-xl shadow-sm flex flex-col"><h3 class="font-bold text-gray-500 text-center mb-2">แนวโน้มรายได้ vs กำไร</h3><div class="flex-grow relative"><canvas id="chartTrend"></canvas></div></div>
+                <div class="border p-4 rounded-xl shadow-sm flex flex-col"><h3 class="font-bold text-gray-500 text-center mb-2">สัดส่วนค่าใช้จ่าย</h3><div class="flex-grow relative"><canvas id="chartPie"></canvas></div></div>
+            </div>
+        </div>
+
+        <div id="view-pnl" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-700">งบกำไรขาดทุน</h2></div>
+            <div class="table-container"><table class="w-full text-sm border-collapse" id="table-pnl"></table></div>
+        </div>
+
+        <div id="view-bs" class="tab-content hidden">
+             <h2 class="text-xl font-bold text-slate-700 mb-4">งบแสดงฐานะการเงิน</h2>
+            <div class="table-container"><table class="w-full text-sm border-collapse" id="table-bs"></table></div>
+        </div>
+
+        <div id="view-settings" class="tab-content hidden">
+            <div class="flex gap-2 mb-4 bg-blue-50 p-4 rounded border border-blue-100">
+                <input type="text" id="new-cat-name" placeholder="ชื่อหัวข้อใหม่..." class="border p-2 rounded flex-grow">
+                <select id="new-cat-type" class="border p-2 rounded bg-white"><option value="rev">รายได้</option><option value="cost">ต้นทุน</option><option value="exp">ค่าใช้จ่าย</option></select>
+                <button onclick="addCategory()" class="bg-blue-600 text-white px-4 rounded shadow hover:bg-blue-700">เพิ่ม</button>
+                <button onclick="resetCategories()" class="text-red-400 text-xs ml-auto underline">คืนค่าเดิม</button>
+            </div>
+            <div class="max-h-[600px] overflow-auto border rounded bg-white shadow-sm"><table class="w-full text-sm"><thead class="bg-gray-200 text-gray-600 sticky top-0"><tr><th class="p-2 text-left w-1/2">ชื่อรายการ</th><th class="p-2 text-left">กลุ่ม</th><th class="p-2 text-center w-12">ลบ</th></tr></thead><tbody id="cat-setting-body" class="divide-y"></tbody></table></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DATA CORE ---
+        let DATA_STORE = []; 
+        let MAPPING_DB = {};
+        let CATEGORIES = [
+            { id: 'c1', name: 'รายได้จากการขาย', type: 'rev' },
+            { id: 'c2', name: 'ต้นทุนขาย', type: 'cost' },
+            { id: 'c3', name: 'ค่าใช้จ่ายในการขาย', type: 'exp' },
+            { id: 'c4', name: 'ค่าใช้จ่ายในการบริหาร', type: 'exp' }
+        ];
+
+        // --- 2. STARTUP ---
+        window.onload = function() {
+            loadFromLocal();
+            renderAll();
+            renderCharts(); 
+        };
+
+        // --- 3. UI LOGIC ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('view-' + tabName).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('tab-active'));
+            document.getElementById('tab-' + tabName).classList.add('tab-active');
+            if(tabName === 'dash') renderCharts();
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderPnL();
+            renderSettings();
+        }
+
+        // --- 4. CALCULATION ---
+        function renderDashboard() {
+            let rev = 0, cost = 0, exp = 0;
+            DATA_STORE.forEach(row => {
+                const catId = MAPPING_DB[row.accCode];
+                if(catId) {
+                    const cat = CATEGORIES.find(c => c.id === catId);
+                    if(cat) {
+                        if(cat.type === 'rev') rev += row.amount;
+                        if(cat.type === 'cost') cost += row.amount;
+                        if(cat.type === 'exp') exp += row.amount;
+                    }
+                }
+            });
+            document.getElementById('dash-rev').innerText = rev.toLocaleString('th-TH', {minimumFractionDigits: 2});
+            document.getElementById('dash-exp').innerText = (cost + exp).toLocaleString('th-TH', {minimumFractionDigits: 2});
+            document.getElementById('dash-net').innerText = (rev - cost - exp).toLocaleString('th-TH', {minimumFractionDigits: 2});
+        }
+
+        function renderPnL() {
+            const table = document.getElementById('table-pnl');
+            if(DATA_STORE.length === 0) {
+                table.innerHTML = `<tr><td class="p-8 text-center text-gray-400">ยังไม่มีข้อมูล (กรุณานำเข้า Excel)</td></tr>`;
+                return;
+            }
+            let html = `<tr class="bg-gray-100 font-bold"><td class="p-2">รายการ</td><td class="p-2 text-right">จำนวนเงิน</td></tr>`;
+            CATEGORIES.forEach(cat => {
+                let sum = 0;
+                DATA_STORE.forEach(row => { if(MAPPING_DB[row.accCode] === cat.id) sum += row.amount; });
+                if(sum !== 0) html += `<tr class="border-b"><td class="p-2 pl-4">${cat.name}</td><td class="p-2 text-right">${sum.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td></tr>`;
+            });
+            table.innerHTML = html;
+        }
+
+        // --- 5. IMPORT EXCEL ---
+        function importExpress(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+
+                    DATA_STORE = [];
+                    for(let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if(row.length > 2 && row[0]) {
+                            DATA_STORE.push({ accCode: String(row[0]), accName: row[1], amount: parseFloat(row[2]) || 0 });
+                            if(!MAPPING_DB[String(row[0])]) MAPPING_DB[String(row[0])] = null;
+                        }
+                    }
+                    autoSave();
+                    renderAll();
+                    alert(`นำเข้าสำเร็จ ${DATA_STORE.length} รายการ`);
+                } catch (err) { alert("ไฟล์ผิดพลาด: " + err.message); }
+                input.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- 6. SYSTEM UTILS ---
+        function loadFromLocal() {
+            const d = localStorage.getItem('v9_data');
+            if(d) DATA_STORE = JSON.parse(d);
+            const m = localStorage.getItem('v9_map');
+            if(m) MAPPING_DB = JSON.parse(m);
+            const c = localStorage.getItem('v9_cat');
+            if(c) CATEGORIES = JSON.parse(c);
+        }
+        function autoSave() {
+            localStorage.setItem('v9_data', JSON.stringify(DATA_STORE));
+            localStorage.setItem('v9_map', JSON.stringify(MAPPING_DB));
+            localStorage.setItem('v9_cat', JSON.stringify(CATEGORIES));
+        }
+        function saveFile() {
+             const d = JSON.stringify({data:DATA_STORE, map:MAPPING_DB, cat:CATEGORIES});
+             const a = document.createElement('a');
+             a.href = "data:text/json;charset=utf-8," + encodeURIComponent(d);
+             a.download = "m-report-backup.json";
+             a.click();
+        }
+        function resetAll() { if(confirm('ล้างข้อมูล?')) { localStorage.clear(); location.reload(); } }
+        
+        // --- 7. SETTINGS ---
+        function renderSettings() {
+            const tbody = document.getElementById('cat-setting-body');
+            tbody.innerHTML = '';
+            CATEGORIES.forEach((cat, idx) => {
+                tbody.innerHTML += `<tr><td class="p-2">${cat.name}</td><td class="p-2">${cat.type}</td><td class="p-2 text-center"><button onclick="deleteCat(${idx})" class="text-red-500">x</button></td></tr>`;
+            });
+        }
+        function addCategory() {
+            const n = document.getElementById('new-cat-name').value;
+            const t = document.getElementById('new-cat-type').value;
+            if(n) { CATEGORIES.push({id:'c'+Date.now(), name:n, type:t}); autoSave(); renderAll(); }
+        }
+        function deleteCat(i) { CATEGORIES.splice(i,1); autoSave(); renderAll(); }
+        function resetCategories() { CATEGORIES = [{ id: 'c1', name: 'รายได้', type: 'rev' }, { id: 'c2', name: 'ต้นทุน', type: 'cost' }]; autoSave(); renderAll(); }
+
+        // --- 8. CHARTS ---
+        function renderCharts() {
+            const ctx1 = document.getElementById('chartTrend');
+            if(ctx1) {
+                if(window.myChart1) window.myChart1.destroy();
+                window.myChart1 = new Chart(ctx1, { type: 'line', data: { labels: ['ม.ค.','ก.พ.','มี.ค.'], datasets: [{label:'รายได้',data:[10,20,15], borderColor:'blue'}] } });
+            }
+            const ctx2 = document.getElementById('chartPie');
+            if(ctx2) {
+                if(window.myChart2) window.myChart2.destroy();
+                window.myChart2 = new Chart(ctx2, { type: 'doughnut', data: { labels: ['A','B'], datasets: [{data:[70,30], backgroundColor:['#ef4444','#22c55e']}] } });
+            }
+        }
+    </script>
+</body>
+</html>
