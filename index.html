@@ -3,112 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สำนักงานบัญชี มุกดาการบัญชี | บริการบัญชีครบวงจร</title>
+    <title>MAcc - Mukda Accounting | สำนักงานบัญชีมืออาชีพ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Sarabun', sans-serif; }
-        .hero-bg { background: linear-gradient(rgba(30, 58, 138, 0.9), rgba(30, 58, 138, 0.8)), url('https://images.unsplash.com/photo-1554224155-6726b3ff0a77?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80'); background-size: cover; background-position: center; }
+        
+        /* 2026 Trend: Tech-Neutral White Background */
+        .bg-trend-white { background-color: #F8FAFC; }
+        
+        /* Saturday Color Theme: Indigo/Royal Blue (Authority & Wealth) */
+        .text-brand-primary { color: #312E81; } /* Indigo 900 */
+        .bg-brand-primary { background-color: #312E81; }
+        .bg-brand-accent { background-color: #4338CA; } /* Indigo 700 */
+
+        .hero-bg { 
+            background: linear-gradient(rgba(30, 27, 75, 0.9), rgba(49, 46, 129, 0.8)), url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80'); 
+            background-size: cover; 
+            background-position: center; 
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-slate-800">
+<body class="bg-trend-white text-slate-800">
 
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center gap-2">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg">
-                        <i class="fa-solid fa-scale-balanced text-xl"></i>
+    <nav class="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                
+                <div class="flex items-center gap-3">
+                    <div class="bg-brand-primary text-white px-3 py-1 rounded-lg font-bold text-2xl tracking-tighter shadow-md flex items-center">
+                        MA<span class="text-blue-300">cc</span>
                     </div>
-                    <span class="font-bold text-xl text-slate-800">MUK ACCOUNTING</span>
+                    <div class="flex flex-col justify-center">
+                        <span class="font-bold text-2xl text-brand-primary leading-none tracking-tight">MAcc</span>
+                        <span class="text-[10px] text-gray-500 tracking-widest uppercase font-semibold">Mukda Accounting</span>
+                    </div>
                 </div>
                 
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="#" class="text-gray-600 hover:text-blue-600 font-medium">หน้าแรก</a>
-                    <a href="#services" class="text-gray-600 hover:text-blue-600 font-medium">บริการของเรา</a>
-                    <a href="#about" class="text-gray-600 hover:text-blue-600 font-medium">เกี่ยวกับเรา</a>
-                    <a href="#contact" class="text-gray-600 hover:text-blue-600 font-medium">ติดต่อเรา</a>
+                    <a href="#" class="text-gray-600 hover:text-brand-primary font-medium transition">หน้าแรก</a>
+                    <a href="#services" class="text-gray-600 hover:text-brand-primary font-medium transition">บริการของเรา</a>
+                    <a href="#knowledge" class="text-gray-600 hover:text-brand-primary font-medium transition">มุมความรู้</a>
+                    <a href="#contact" class="text-gray-600 hover:text-brand-primary font-medium transition">ติดต่อเรา</a>
                 </div>
 
                 <div>
-                    <a href="./portal/index.html" class="bg-blue-600 text-white px-5 py-2 rounded-full font-bold hover:bg-blue-700 shadow-lg transition transform hover:scale-105 flex items-center gap-2">
-                        <i class="fa-solid fa-lock"></i> เข้าสู่ระบบลูกค้า
+                    <a href="./portal/index.html" class="bg-brand-accent text-white px-6 py-2.5 rounded-full font-bold hover:bg-indigo-800 shadow-lg hover:shadow-indigo-500/30 transition transform hover:-translate-y-0.5 flex items-center gap-2">
+                        <i class="fa-solid fa-lock text-sm"></i> เข้าสู่ระบบลูกค้า
                     </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <header class="hero-bg text-white py-24 text-center px-4">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4">ดูแลบัญชีธุรกิจคุณ ด้วยความเป็นมืออาชีพ</h1>
-        <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">บริการรับทำบัญชี ตรวจสอบบัญชี วางแผนภาษี และจดทะเบียนบริษัท ถูกต้อง แม่นยำ ทันเวลา</p>
-        <a href="#contact" class="bg-white text-blue-800 px-8 py-3 rounded-lg font-bold hover:bg-gray-100 transition shadow-lg">ปรึกษาฟรี</a>
+    <header class="hero-bg text-white py-28 text-center px-4 relative overflow-hidden">
+        <div class="relative z-10 max-w-4xl mx-auto">
+            <span class="bg-blue-500/20 text-blue-100 px-4 py-1 rounded-full text-sm font-bold border border-blue-400/30 mb-6 inline-block backdrop-blur-md">
+                ✨ MAcc : The Solution for Business Growth
+            </span>
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+                ยกระดับธุรกิจของคุณ <br>ด้วยระบบบัญชีที่แม่นยำและทันสมัย
+            </h1>
+            <p class="text-xl text-blue-100 mb-10 max-w-2xl mx-auto font-light">
+                MAcc ให้บริการรับทำบัญชี ตรวจสอบบัญชี และวางแผนภาษีครบวงจร ด้วยเทคโนโลยี Cloud Accounting ที่ช่วยให้คุณบริหารธุรกิจได้ทุกที่
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#contact" class="bg-white text-brand-primary px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition shadow-lg text-lg">
+                    ปรึกษาฟรีวันนี้
+                </a>
+                <a href="#services" class="bg-transparent border-2 border-white/30 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/10 transition text-lg backdrop-blur-sm">
+                    ดูแพ็กเกจราคา
+                </a>
+            </div>
+        </div>
     </header>
 
-    <section id="services" class="py-16 max-w-6xl mx-auto px-4">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl font-bold text-slate-800">บริการของเรา</h2>
-            <div class="w-16 h-1 bg-blue-600 mx-auto mt-2"></div>
+    <section id="services" class="py-20 max-w-7xl mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-brand-primary mb-3">บริการของเรา</h2>
+            <p class="text-gray-500">Professional Services by MAcc</p>
+            <div class="w-20 h-1.5 bg-brand-accent mx-auto mt-4 rounded-full"></div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-book"></i></div>
-                <h3 class="text-xl font-bold mb-2">รับทำบัญชีรายเดือน</h3>
-                <p class="text-gray-500">บันทึกบัญชีตามมาตรฐาน ปิดงบการเงิน ยื่นภาษีมูลค่าเพิ่ม (ภ.พ.30) และภาษีหัก ณ ที่จ่าย</p>
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition duration-300 group">
+                <div class="w-16 h-16 bg-indigo-50 text-brand-primary rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-brand-primary group-hover:text-white transition">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-3 text-slate-800">บัญชีและภาษี</h3>
+                <p class="text-gray-500 leading-relaxed">
+                    บันทึกบัญชีรายเดือน ปิดงบการเงิน ยื่นแบบภาษีทุกประเภท (ภ.พ.30, ภ.ง.ด.) พร้อมให้คำปรึกษาเพื่อความถูกต้อง
+                </p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-magnifying-glass-dollar"></i></div>
-                <h3 class="text-xl font-bold mb-2">ตรวจสอบบัญชี</h3>
-                <p class="text-gray-500">บริการตรวจสอบบัญชีโดยผู้สอบบัญชีรับอนุญาต (CPA) รับรองงบการเงินประจำปี</p>
+
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition duration-300 group">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-blue-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-3 text-slate-800">ตรวจสอบบัญชี</h3>
+                <p class="text-gray-500 leading-relaxed">
+                    บริการตรวจสอบบัญชีโดยผู้สอบบัญชีรับอนุญาต (CPA) รับรองงบการเงินประจำปี ด้วยมาตรฐานวิชาชีพ
+                </p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-file-signature"></i></div>
-                <h3 class="text-xl font-bold mb-2">จดทะเบียนธุรกิจ</h3>
-                <p class="text-gray-500">จดทะเบียนจัดตั้งบริษัท ห้างหุ้นส่วน เปลี่ยนแปลงกรรมการ และขึ้นทะเบียนประกันสังคม</p>
+
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition duration-300 group">
+                <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-purple-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-3 text-slate-800">จดทะเบียนธุรกิจ</h3>
+                <p class="text-gray-500 leading-relaxed">
+                    จดทะเบียนจัดตั้งบริษัท ห้างหุ้นส่วน เปลี่ยนแปลงกรรมการ วางระบบบัญชีเริ่มต้นสำหรับธุรกิจใหม่ (Startup)
+                </p>
             </div>
         </div>
     </section>
 
-    <section id="contact" class="bg-slate-50 py-16">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <h2 class="text-3xl font-bold text-slate-800 mb-8">สนใจใช้บริการ? ติดต่อเราได้ทันที</h2>
-            <div class="bg-white p-8 rounded-2xl shadow-lg grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div class="text-left space-y-4">
-                    <div class="flex items-center gap-4">
-                        <div class="bg-blue-100 p-3 rounded-full text-blue-600"><i class="fa-solid fa-phone"></i></div>
+    <section class="bg-brand-primary text-white py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6">ทำไมต้องเลือก MAcc ?</h2>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-circle-check text-green-400 mt-1"></i>
+                            <span><strong class="text-lg">Modern Technology:</strong> เราใช้ระบบ Cloud Accounting ทันสมัย เช็คข้อมูลได้ Real-time</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-circle-check text-green-400 mt-1"></i>
+                            <span><strong class="text-lg">Experience:</strong> ทีมงานผู้เชี่ยวชาญ ประสบการณ์สูง ดูแลเหมือนคนในครอบครัว</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-circle-check text-green-400 mt-1"></i>
+                            <span><strong class="text-lg">Accuracy:</strong> ถูกต้อง แม่นยำ ลดความเสี่ยงทางภาษี</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white/10 p-8 rounded-2xl backdrop-blur-sm border border-white/10 text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                    <h3 class="text-xl font-bold mb-4 relative z-10">พันธกิจของเรา (Mission)</h3>
+                    <div class="text-5xl text-yellow-400 mb-2 relative z-10"><i class="fa-solid fa-hand-holding-heart"></i></div>
+                    <div class="text-2xl font-bold text-white mb-1 relative z-10">ดูแลด้วยใจ</div>
+                    <div class="text-blue-200 text-sm relative z-10">เติบโตไปพร้อมกับธุรกิจคุณ</div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="knowledge" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase mb-2 inline-block">MAcc Academy</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-800 mb-4">คุยเรื่องภาษีกับ MAcc</h2>
+                <p class="text-gray-500">เกร็ดความรู้บัญชีและภาษี เข้าใจง่าย สำหรับเจ้าของธุรกิจ</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div class="bg-white p-2 rounded-2xl shadow-lg transform hover:scale-[1.02] transition duration-300">
+                    <div class="aspect-video rounded-xl overflow-hidden bg-black relative">
+                        <iframe class="w-full h-full" src="https://www.youtube.com/embed/ScMzIvxBSi4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-1"><i class="fa-brands fa-youtube text-red-600"></i> Highlight: ภาษีเบื้องต้นที่ SME ต้องรู้</h3>
+                        <p class="text-sm text-gray-400">อัปเดตล่าสุดปี 2026</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-start hover:shadow-md transition cursor-pointer group">
+                        <div class="bg-blue-50 text-blue-600 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-file-invoice-dollar text-xl"></i>
+                        </div>
                         <div>
-                            <div class="text-sm text-gray-400">เบอร์โทรศัพท์</div>
-                            <div class="font-bold text-lg">08x-xxx-xxxx</div>
+                            <h3 class="font-bold text-lg text-slate-800 group-hover:text-blue-700 transition">จดทะเบียนบริษัทต้องใช้อะไรบ้าง?</h3>
+                            <p class="text-gray-500 text-sm mt-1">สรุปเอกสารและขั้นตอนการจดทะเบียนนิติบุคคลแบบเข้าใจง่าย...</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="bg-green-100 p-3 rounded-full text-green-600"><i class="fa-brands fa-line"></i></div>
-                        <div>
-                            <div class="text-sm text-gray-400">Line ID</div>
-                            <div class="font-bold text-lg">@muk-account</div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-start hover:shadow-md transition cursor-pointer group">
+                        <div class="bg-purple-50 text-purple-600 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-purple-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-calculator text-xl"></i>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="bg-red-100 p-3 rounded-full text-red-600"><i class="fa-solid fa-envelope"></i></div>
                         <div>
-                            <div class="text-sm text-gray-400">อีเมล</div>
-                            <div class="font-bold text-lg">contact@example.com</div>
+                            <h3 class="font-bold text-lg text-slate-800 group-hover:text-purple-700 transition">ลดหย่อนภาษีปี 2026 มีอะไรใหม่?</h3>
+                            <p class="text-gray-500 text-sm mt-1">วางแผนภาษีบุคคลธรรมดาและนิติบุคคลให้คุ้มค่าที่สุด...</p>
                         </div>
                     </div>
                 </div>
-                
-                <form class="space-y-4 text-left">
-                    <input type="text" placeholder="ชื่อของคุณ" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    <input type="text" placeholder="เบอร์โทรติดต่อ" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">ส่งข้อความให้โทรกลับ</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-20 max-w-5xl mx-auto px-4">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+            <div class="bg-slate-900 text-white p-10 md:w-2/5 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6">ติดต่อเรา</h3>
+                    <p class="text-gray-400 mb-8">ปรึกษาปัญหาบัญชีและภาษีฟรี ทีมงาน MAcc พร้อมดูแลคุณ</p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-phone"></i></div>
+                            <div>
+                                <div class="text-xs text-gray-400">โทรศัพท์</div>
+                                <div class="font-bold">086-454-2871</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center"><i class="fa-brands fa-line"></i></div>
+                            <div>
+                                <div class="text-xs text-gray-400">Line Official</div>
+                                <div class="font-bold">@macc-account</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-envelope"></i></div>
+                            <div>
+                                <div class="text-xs text-gray-400">อีเมล</div>
+                                <div class="font-bold">contact@macc.com</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-10 pt-10 border-t border-gray-700">
+                    <h4 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wide">ติดตามข่าวสาร & โปรโมชั่น</h4>
+                    <div class="flex gap-3">
+                        <a href="#" class="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white transition transform hover:-translate-y-1">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center text-white transition transform hover:-translate-y-1">
+                            <i class="fa-brands fa-line text-lg"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-black border border-gray-600 hover:border-white flex items-center justify-center text-white transition transform hover:-translate-y-1">
+                            <i class="fa-brands fa-tiktok"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white transition transform hover:-translate-y-1">
+                            <i class="fa-brands fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-10 md:w-3/5 bg-white">
+                <h3 class="text-2xl font-bold text-slate-800 mb-6">ส่งข้อความถึงเรา</h3>
+                <form class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" placeholder="ชื่อของคุณ" class="w-full border bg-gray-50 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                        <input type="text" placeholder="เบอร์โทรศัพท์" class="w-full border bg-gray-50 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    </div>
+                    <input type="email" placeholder="อีเมล" class="w-full border bg-gray-50 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    <textarea rows="4" placeholder="รายละเอียดที่ต้องการสอบถาม..." class="w-full border bg-gray-50 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                    <button class="w-full bg-brand-accent text-white py-3 rounded-lg font-bold hover:bg-indigo-800 shadow-lg transition transform active:scale-95">
+                        ส่งข้อความ
+                    </button>
                 </form>
             </div>
         </div>
     </section>
 
-    <footer class="bg-slate-800 text-slate-400 py-8 text-center text-sm">
-        <p>© 2024 สำนักงานมุกดาการบัญชี. สงวนลิขสิทธิ์.</p>
+    <footer class="bg-white border-t border-gray-100 py-8 text-center">
+        <div class="flex items-center justify-center gap-2 mb-4 opacity-50 grayscale hover:grayscale-0 transition duration-500">
+             <span class="font-bold text-lg text-brand-primary">MAcc</span>
+        </div>
+        <p class="text-slate-400 text-sm">© 2026 MAcc (Mukda Accounting). สงวนลิขสิทธิ์.</p>
     </footer>
 
 </body>
