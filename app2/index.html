@@ -3,373 +3,789 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-Audit Pro: ระบบตรวจสอบบัญชี (Universal Import)</title>
+    <title>ระบบจัดซื้อ & บัญชี (Stable Version)</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; font-size: 14px; }
-        .num-input { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-        .row-checked { background-color: #ecfdf5; border-left: 4px solid #10b981; } 
-        .row-unchecked { background-color: #fff1f2; border-left: 4px solid #f43f5e; opacity: 0.9; }
-        .tab-btn { @apply px-4 py-2 font-bold cursor-pointer text-gray-500 hover:bg-white hover:text-blue-600 transition-all rounded-t-lg border-b-2 border-transparent; }
-        .tab-active { @apply bg-white text-blue-700 border-b-4 border-blue-600 shadow-sm; }
-        .btn-action { @apply px-3 py-1.5 rounded shadow text-xs flex items-center justify-center gap-2 transition-transform active:scale-95 font-bold; }
-        
-        .match-ok { background-color: #dcfce7; color: #166534; font-weight: bold; }
-        .match-warn { background-color: #fef9c3; color: #854d0e; }
-        .match-err { background-color: #fee2e2; color: #991b1b; font-weight: bold; }
 
-        @media print { 
-            .no-print { display: none !important; } 
-            body { background-color: white; -webkit-print-color-adjust: exact; }
-            @page { size: A4 landscape; margin: 10mm; }
-            input { border: none !important; background: transparent !important; padding: 0; }
-            .shadow-lg, .border { border: 1px solid #000 !important; box-shadow: none !important; }
-            .overflow-x-auto { overflow: visible; }
-            /* Print Modes */
-            body.print-mode-checked tr.row-unchecked { display: none !important; }
-            body.print-mode-unchecked tr.row-checked { display: none !important; }
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .hidden { display: none !important; }
+        .sidebar { width: 260px; height: 100vh; position: fixed; left: 0; top: 0; background: #0f172a; color: white; display: flex; flex-direction: column; z-index: 50; }
+        .sidebar-content { flex: 1; overflow-y: auto; }
+        .sidebar-footer { padding: 20px; border-top: 1px solid #334155; background: #020617; }
+        .main-content { margin-left: 260px; padding: 20px; min-height: 100vh; }
+        #login-screen { position: fixed; inset: 0; z-index: 100; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+        
+        .a4-paper { 
+            background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 20mm; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; color: #1e293b; 
+            display: flex; flex-direction: column; 
+        }
+        .content-area { flex-grow: 1; }
+        
+        .input-box { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; width: 100%; transition: 0.2s; background: white; }
+        .input-box:focus { outline: none; border-color: #f59e0b; background-color: #fffbeb; }
+        textarea.input-box { resize: none; overflow: hidden; min-height: 40px; }
+        .nav-item { cursor: pointer; padding: 12px 20px; display: flex; align-items: center; gap: 10px; opacity: 0.7; transition: 0.2s; }
+        .nav-item:hover { opacity: 1; background: #334155; }
+        .nav-item.active { opacity: 1; background: #ea580c; font-weight: bold; border-right: 4px solid #fdba74; }
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background-color: #e2e8f0; }
+
+        .st-paid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: bold; }
+        .st-pending { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: bold; }
+        .st-unpaid { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: bold; }
+        .st-processed { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: bold; text-decoration: line-through;}
+
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .sidebar, .no-print, #login-screen, #loading-overlay { display: none !important; }
+            .main-content { margin: 0; padding: 0; width: 100%; height: 100%; }
+            .a4-paper { box-shadow: none; margin: 0; width: 210mm; height: 296mm; padding: 10mm 15mm 10mm 15mm; border: none; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+            .content-area { flex: 1; display: flex; flex-direction: column; }
+            #signature-block { margin-top: auto; padding-top: 10px; page-break-inside: avoid; }
+            input, textarea, select { border: none !important; background: transparent !important; resize: none; padding: 0; font-family: 'Sarabun', sans-serif; color: #000; }
+            select { appearance: none; -webkit-appearance: none; }
+            ::placeholder { color: transparent; }
+            table th { background-color: #f1f5f9 !important; color: #000 !important; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+            table td { border-bottom: 1px solid #ddd; }
         }
     </style>
 </head>
-<body class="p-4 text-slate-800 min-h-screen relative">
+<body>
 
-    <div id="save-status" class="fixed top-4 right-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm opacity-0 transition-opacity no-print z-50">
-        <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกแล้ว
+    <div id="login-screen">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 text-center">
+            <div class="mb-6">
+                <i class="fa-solid fa-ship text-5xl text-orange-600 mb-2"></i>
+                <h1 class="text-2xl font-bold text-slate-800">ระบบจัดซื้อ (Final)</h1>
+                <p class="text-gray-500 text-sm">Purchase & Import Management</p>
+            </div>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <input type="email" id="auth-email" class="w-full bg-gray-50 border border-gray-300 rounded px-4 py-2.5 outline-none" placeholder="อีเมล" required>
+                <input type="password" id="auth-pass" class="w-full bg-gray-50 border border-gray-300 rounded px-4 py-2.5 outline-none" placeholder="รหัสผ่าน" required>
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded shadow">เข้าสู่ระบบ</button>
+            </form>
+            <div class="mt-4"><button onclick="handleRegister()" class="text-orange-600 text-sm font-bold hover:underline">สมัครสมาชิกใหม่</button></div>
+        </div>
     </div>
 
-    <div class="max-w-7xl mx-auto">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 no-print">
-            <div class="flex justify-between items-center mb-2">
-                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-briefcase text-blue-600"></i> M-Audit Pro <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">Universal</span>
-                </h1>
-                <div class="flex gap-2">
-                    <input type="text" id="client-name" placeholder="ชื่อบริษัท..." class="border p-1.5 rounded text-sm w-48" oninput="saveData()">
-                    <button onclick="clearAll()" class="text-red-400 text-xs underline">ล้างข้อมูล</button>
+    <div id="app-container" class="hidden">
+        <div class="sidebar no-print">
+            <div class="sidebar-content">
+                <div class="p-6 border-b border-gray-800">
+                    <h1 class="text-xl font-bold text-orange-500"><i class="fa-solid fa-earth-americas"></i> จัดซื้อ/นำเข้า</h1>
+                    <div id="user-display" class="text-xs text-green-400 mt-2 truncate font-bold">...</div>
                 </div>
+                <nav class="mt-4 space-y-1">
+                    <div class="px-4 py-2 text-xs text-slate-500 uppercase font-bold">Main</div>
+                    <div onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item active"><i class="fa-solid fa-chart-line w-5"></i> ภาพรวม</div>
+                    <div onclick="showPage('create');setDocType('PO')" id="nav-create" class="nav-item"><i class="fa-solid fa-cart-plus w-5"></i> บันทึกซื้อ/นำเข้า</div>
+                    <div onclick="showPage('create');setDocType('EXP')" id="nav-expense" class="nav-item text-yellow-300"><i class="fa-solid fa-receipt w-5"></i> บันทึกค่าใช้จ่าย</div>
+                    <div onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa-solid fa-list w-5"></i> ประวัติเอกสาร</div>
+                    
+                    <div class="px-4 py-2 mt-2 text-xs text-slate-500 uppercase font-bold">Accounting & Vendor</div>
+                    <div onclick="showPage('vat_report')" id="nav-vat_report" class="nav-item text-green-400"><i class="fa-solid fa-file-invoice-dollar w-5"></i> รายงานภาษีซื้อ</div>
+                    <div onclick="showPage('ap_report')" id="nav-ap_report" class="nav-item text-red-300"><i class="fa-solid fa-user-clock w-5"></i> เจ้าหนี้คงค้าง</div>
+                    <div onclick="showPage('vendor')" id="nav-vendor" class="nav-item"><i class="fa-solid fa-address-book w-5"></i> ฐานข้อมูลผู้ขาย</div>
+                    <div onclick="showPage('journal')" id="nav-journal" class="nav-item text-cyan-300"><i class="fa-solid fa-book w-5"></i> สมุดรายวัน</div>
+                    <div onclick="showPage('gl')" id="nav-gl" class="nav-item text-cyan-300"><i class="fa-solid fa-book-open w-5"></i> แยกประเภท (GL)</div>
+                    <div onclick="showPage('trialbal')" id="nav-trialbal" class="nav-item text-cyan-300"><i class="fa-solid fa-scale-balanced w-5"></i> งบทดลอง</div>
+                    <div onclick="showPage('coa')" id="nav-coa" class="nav-item text-cyan-300"><i class="fa-solid fa-list-ol w-5"></i> ผังบัญชี</div>
+
+                    <div class="px-4 py-2 mt-2 text-xs text-slate-500 uppercase font-bold">Inventory</div>
+                    <div onclick="showPage('stock')" id="nav-stock" class="nav-item"><i class="fa-solid fa-boxes-stacked w-5"></i> สต็อกสินค้า</div>
+                    <div onclick="showPage('settings')" id="nav-settings" class="nav-item text-yellow-400"><i class="fa-solid fa-gear w-5"></i> ตั้งค่ากิจการ</div>
+                </nav>
             </div>
+            <div class="sidebar-footer"><button onclick="auth.signOut();location.reload()" class="w-full bg-slate-800 text-white py-2 rounded">ออกจากระบบ</button></div>
         </div>
 
-        <div class="flex gap-1 border-b border-gray-300 mb-0 no-print overflow-x-auto">
-            <button onclick="switchTab('audit')" id="tab-audit" class="tab-btn tab-active text-purple-700 bg-purple-50">1. ตรวจสอบ ภพ.30</button>
-            <button onclick="switchTab('recon-vat')" id="tab-recon-vat" class="tab-btn text-orange-700 bg-orange-50">2. กระทบยอด ภพ.30 (vs GL)</button>
-            <button onclick="switchTab('recon-bank')" id="tab-recon-bank" class="tab-btn text-green-700 bg-green-50">3. กระทบยอดธนาคาร</button>
-        </div>
+        <div class="main-content">
+            <div id="loading-overlay" class="fixed inset-0 bg-white/95 z-50 flex items-center justify-center hidden"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-orange-600"></i></div>
 
-        <div class="bg-white p-6 rounded-b-xl shadow-lg border border-gray-200 min-h-[600px]">
-            
-            <div id="content-audit">
-                <div class="flex flex-wrap gap-3 items-end mb-4 no-print bg-purple-50 p-3 rounded-lg border border-purple-100">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 mb-1">นำเข้า ภพ.30 (Express)</label>
-                        <div class="flex gap-1">
-                            <select id="audit-encoding" class="border p-1 text-xs rounded bg-white"><option value="TIS-620">Thai (TIS-620)</option><option value="UTF-8">UTF-8</option></select>
-                            <button onclick="document.getElementById('file-audit').click()" class="btn-action bg-purple-600 text-white hover:bg-purple-700">Import</button>
-                            <input type="file" id="file-audit" class="hidden" accept=".csv,.txt,.xlsx,.xls" onchange="importAuditFile(this)">
-                        </div>
+            <div id="page-dashboard">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">ภาพรวม (Dashboard)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <div class="text-gray-500 text-sm">ยอดซื้อรวม (Bill & Exp & Dep)</div>
+                        <div class="text-3xl font-bold text-blue-600" id="dash-total">0.00</div>
                     </div>
-                    <div class="flex-grow">
-                        <label class="block text-[10px] font-bold text-gray-500 mb-1">ค้นหาเพื่อติ๊กตรวจ (ยิงบาร์โค้ดได้)</label>
-                        <input type="text" id="audit-search" placeholder="เลขใบกำกับ..." class="w-full border p-1.5 rounded shadow-inner text-sm focus:ring-2 focus:ring-purple-300" onkeyup="searchAndMarkAudit(event)">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                        <div class="text-gray-500 text-sm">เจ้าหนี้คงค้าง (Unpaid Bill)</div>
+                        <div class="text-3xl font-bold text-red-600" id="dash-pending">0.00</div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 mb-1">ส่งออก / พิมพ์</label>
-                        <div class="flex gap-1">
-                            <button onclick="exportAuditExcel()" class="btn-action bg-green-600 text-white hover:bg-green-700">Excel</button>
-                            <button onclick="setPrintMode('checked')" class="btn-action bg-gray-700 text-white hover:bg-gray-800">พิมพ์ยื่น</button>
-                            <button onclick="setPrintMode('unchecked')" class="btn-action bg-red-500 text-white hover:bg-red-600">พิมพ์แก้</button>
-                        </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                        <div class="text-gray-500 text-sm">จ่ายแล้ว (Paid & Direct Pay)</div>
+                        <div class="text-3xl font-bold text-green-600" id="dash-paid">0.00</div>
                     </div>
                 </div>
-                
-                <div class="grid grid-cols-3 gap-4 mb-4 text-center no-print text-xs">
-                    <div class="p-2 bg-gray-50 border rounded">ทั้งหมด: <span id="cnt-total" class="font-bold">0</span> รายการ (<span id="sum-audit-total">0.00</span>)</div>
-                    <div class="p-2 bg-green-50 border border-green-200 rounded text-green-700">เลือกยื่น: <span id="cnt-checked" class="font-bold">0</span> รายการ (<span id="sum-audit-checked" class="font-bold text-lg">0.00</span>)</div>
-                    <div class="p-2 bg-red-50 border border-red-200 rounded text-red-700">ไม่ยื่น: <span id="sum-audit-unchecked" class="font-bold">0.00</span></div>
-                </div>
-
-                <div class="overflow-x-auto"><table class="w-full text-sm border-collapse"><thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10"><tr><th class="p-2 border w-10 text-center no-print"><input type="checkbox" onclick="toggleAllAudit(this)"></th><th class="p-2 border w-24">วันที่</th><th class="p-2 border w-32">เลขใบกำกับ</th><th class="p-2 border">ชื่อผู้ขาย</th><th class="p-2 border w-28 text-center">เลขผู้เสียภาษี</th><th class="p-2 border w-28 text-right">มูลค่า</th><th class="p-2 border w-24 text-right">ภาษี</th><th class="p-2 border w-32">หมายเหตุ</th></tr></thead><tbody id="audit-body"></tbody><tfoot class="bg-purple-50 font-bold"><tr><td colspan="6" class="p-2 text-right">รวมยอดสุทธิ</td><td class="p-2 text-right" id="ft-tax">0.00</td><td></td></tr></tfoot></table></div>
             </div>
 
-            <div id="content-recon-vat" class="hidden">
-                <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-4 no-print flex flex-wrap gap-4 items-center">
-                    <div class="flex-1">
-                        <h3 class="font-bold text-orange-800">กระทบยอด ภพ.30 กับ บัญชี (GL)</h3>
-                        <p class="text-xs text-orange-600">เปรียบเทียบข้อมูลจาก Tab 1 กับไฟล์ GL ภาษีซื้อ</p>
+            <div id="page-create" class="hidden">
+                <div class="mb-6 flex flex-wrap justify-between items-center no-print sticky top-0 bg-slate-50/95 backdrop-blur p-3 z-40 border-b shadow-sm gap-2">
+                    <div class="flex gap-2">
+                        <button onclick="setDocType('PO')" id="btn-po" class="px-3 py-1 rounded font-bold border text-sm">ใบสั่งซื้อ</button>
+                        <button onclick="setDocType('BILL')" id="btn-bill" class="px-3 py-1 rounded font-bold border text-sm text-blue-600 border-blue-200 bg-blue-50">ตั้งเจ้าหนี้</button>
+                        <button onclick="setDocType('DEP')" id="btn-dep" class="px-3 py-1 rounded font-bold border text-sm text-purple-600 border-purple-200 bg-purple-50">จ่ายมัดจำ</button>
+                        <button onclick="setDocType('PV')" id="btn-pv" class="px-3 py-1 rounded font-bold border text-sm text-green-600 border-green-200 bg-green-50">ใบสำคัญจ่าย</button>
+                        <button onclick="setDocType('EXP')" id="btn-exp" class="px-3 py-1 rounded font-bold border text-sm text-yellow-600 border-yellow-200 bg-yellow-50">ค่าใช้จ่าย</button>
+                        <button onclick="setDocType('DN')" id="btn-dn" class="px-3 py-1 rounded font-bold border text-sm text-red-600 border-red-200 bg-red-50">ลดหนี้</button>
                     </div>
                     <div class="flex gap-2">
-                        <select id="vat-gl-encoding" class="border p-1.5 text-xs rounded bg-white"><option value="TIS-620">Thai GL</option><option value="UTF-8">UTF-8</option></select>
-                        <button onclick="document.getElementById('file-vat-gl').click()" class="btn-action bg-orange-600 text-white hover:bg-orange-700"><i class="fa-solid fa-upload"></i> Import GL ภาษีซื้อ</button>
-                        <input type="file" id="file-vat-gl" class="hidden" accept=".csv,.xlsx,.xls" onchange="importGLFile(this, 'vat')">
-                        <button onclick="exportReconVatExcel()" class="btn-action bg-green-600 text-white hover:bg-green-700"><i class="fa-solid fa-file-excel"></i> Export ผลต่าง</button>
+                        <button onclick="resetForm()" class="text-gray-500 px-3">ล้าง</button>
+                        <button onclick="saveDocument()" class="bg-orange-600 text-white px-4 py-1.5 rounded font-bold shadow hover:bg-orange-700">บันทึก</button>
+                        <button onclick="window.print()" class="bg-slate-600 text-white px-4 py-1.5 rounded font-bold shadow hover:bg-slate-700">พิมพ์ (PDF)</button>
                     </div>
                 </div>
-                <div class="flex justify-between items-center mb-2 font-bold text-sm bg-gray-100 p-2 rounded">
-                    <div class="text-blue-600">ยอด ภพ.30 (Tab 1): <span id="rec-vat-sum-report">0.00</span></div>
-                    <div class="text-orange-600">ยอด GL (Import): <span id="rec-vat-sum-gl">0.00</span></div>
-                    <div class="text-red-600">ผลต่าง: <span id="rec-vat-sum-diff">0.00</span></div>
+
+                <div class="a4-paper">
+                    <div class="content-area">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-2/3 pr-8">
+                                <h2 class="text-3xl font-bold mb-2 text-orange-800" id="doc-title">ใบสั่งซื้อ</h2>
+                                <textarea id="my-info" class="input-box bg-transparent border-none p-0 text-sm w-full h-16" placeholder="ที่อยู่บริษัท..."></textarea>
+                            </div>
+                            <div class="w-1/3 text-right">
+                                <div class="bg-orange-50 p-4 rounded border border-orange-100 text-left">
+                                    <div class="mb-2"><label class="text-xs font-bold text-gray-500 block">เลขที่เอกสาร</label><input type="text" id="doc-no" class="font-bold text-lg bg-transparent w-full text-right" readonly></div>
+                                    <div><label class="text-xs font-bold text-gray-500 block">วันที่</label><input type="date" id="doc-date" class="bg-transparent w-full text-right"></div>
+                                    <div class="mt-2 pt-2 border-t border-orange-200">
+                                        <label class="text-xs font-bold text-gray-500 block">อ้างอิง (Ref.)</label>
+                                        <input type="text" id="doc-ref-display" class="w-full text-right bg-transparent text-sm font-bold text-blue-600" placeholder="-">
+                                        <input type="hidden" id="ref-amount-thb">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="border-gray-200 mb-4">
+
+                        <input type="hidden" id="ref-doc-id" value="">
+
+                        <div class="mb-4 flex gap-6">
+                            <div class="w-2/3">
+                                <label class="block text-xs font-bold text-gray-400 mb-1"><i class="fa-solid fa-store"></i> ผู้ขาย / ผู้รับเงิน</label>
+                                <div class="flex gap-1">
+                                    <select onchange="pickVendor(this.value)" id="vendor-picker" class="w-full mb-2 border rounded p-1 text-sm bg-yellow-50 cursor-pointer"><option value="">-- เลือกผู้ขาย --</option></select>
+                                    <button onclick="openVendorModal()" class="mb-2 border rounded px-2 text-sm hover:bg-gray-100 no-print" title="เพิ่มผู้ขายใหม่">+</button>
+                                </div>
+                                <textarea id="vendor-info" class="input-box w-full p-2 text-sm h-20 bg-gray-50" readonly placeholder="ที่อยู่ผู้ขาย..."></textarea>
+                                
+                                <div class="mt-2">
+                                    <label class="block text-xs font-bold text-gray-500">เลขที่ใบกำกับภาษี (จากผู้ขาย):</label>
+                                    <input type="text" id="vendor-inv-no" class="input-box w-full bg-yellow-50/50" placeholder="ระบุเลขที่บิลที่ได้รับมา...">
+                                </div>
+
+                                <input type="hidden" id="vendor-id">
+                                <input type="hidden" id="vendor-currency" value="THB">
+                                <input type="hidden" id="vendor-acc-type" value="2000">
+                            </div>
+                            <div class="w-1/3">
+                                <div id="fx-box" class="hidden bg-blue-50 p-3 rounded border border-blue-200 mb-2">
+                                    <label class="block text-xs font-bold text-blue-700 mb-1">💱 สกุลเงินต่างประเทศ</label>
+                                    <div class="flex justify-between items-center mb-1"><span class="text-sm">Currency:</span><span id="display-currency" class="font-bold">USD</span></div>
+                                    <label class="block text-xs font-bold text-gray-500 mt-2">อัตราแลกเปลี่ยน</label>
+                                    <input type="number" id="exchange-rate" oninput="calcTotal()" class="w-full border p-1 text-right font-bold text-blue-800" value="1.00">
+                                </div>
+                                <label class="block text-xs font-bold text-gray-400 mb-1">ชำระโดย</label>
+                                <select id="payment-method" class="border rounded px-2 py-1 text-sm bg-white font-bold text-gray-700 w-full">
+                                    <option value="cash">💵 จ่ายเงินสด</option>
+                                    <option value="bank">🏦 จ่ายเงินโอน</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <table class="w-full mb-6 text-sm">
+                            <thead class="bg-slate-100 text-slate-600 border-y font-bold">
+                                <tr><th class="p-2" id="th-item-name">รายการสินค้า</th><th class="p-2 w-20 text-center">จำนวน</th><th class="p-2 w-24 text-right">หน่วยละ <span id="th-curr1">(THB)</span></th><th class="p-2 w-28 text-right">รวม <span id="th-curr2">(THB)</span></th><th class="w-8 no-print"></th></tr>
+                            </thead>
+                            <tbody id="item-list"></tbody>
+                        </table>
+                        
+                        <button onclick="addItem()" class="no-print mb-8 text-orange-600 font-bold text-sm border border-dashed border-orange-300 px-4 py-2 w-full rounded hover:bg-orange-50">+ เพิ่มรายการ</button>
+
+                        <div class="flex justify-end break-inside-avoid">
+                            <div class="w-1/2 space-y-2">
+                                <div class="flex justify-between text-sm"><span class="text-gray-600">รวมเงิน <span id="sum-curr">(THB)</span></span><span id="subtotal" class="font-bold">0.00</span></div>
+                                
+                                <div id="deposit-box" class="hidden text-sm text-purple-700 bg-purple-50 p-2 rounded flex justify-between items-center">
+                                    <span>หัก: เงินมัดจำจ่ายล่วงหน้า <button onclick="openDepositModal()" class="text-xs bg-white border px-1 rounded ml-2 hover:bg-purple-100 no-print">เลือกมัดจำ</button></span>
+                                    <span id="deposit-val">- 0.00</span>
+                                    <input type="hidden" id="deposit-deduct" value="0"><input type="hidden" id="deposit-ref-id">
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm gap-2">
+                                    <div class="flex items-center gap-2"><input type="checkbox" id="use-vat" onchange="calcTotal()" checked> <span>VAT 7%</span></div>
+                                    <span id="vat" class="text-gray-600">0.00</span>
+                                </div>
+                                <hr class="border-gray-200">
+                                <div class="flex justify-between text-lg font-bold"><span class="text-slate-800">Grand Total <span id="grand-curr">(THB)</span></span><span id="grand-total" class="text-orange-900">0.00</span></div>
+                                
+                                <div id="thb-convert-box" class="hidden mt-2 pt-2 border-t border-dashed border-gray-300">
+                                    <div class="flex justify-between text-sm text-blue-800"><span class="font-bold">ยอดเงินแปลงเป็นบาท (THB):</span><span id="grand-total-thb" class="font-bold">0.00</span></div>
+                                </div>
+                                
+                                <div class="mt-4 pt-4 border-t text-sm text-gray-500" id="bank-info-display"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="signature-block" class="mt-8">
+                        <div class="grid grid-cols-3 gap-8 text-center text-sm">
+                            <div class="space-y-8"><div class="border-b border-black w-3/4 mx-auto"></div><p>ผู้จัดทำ (Prepared By)</p></div>
+                            <div class="space-y-8"><div class="border-b border-black w-3/4 mx-auto"></div><p>ผู้ตรวจสอบ (Checked By)</p></div>
+                            <div class="space-y-8"><div class="border-b border-black w-3/4 mx-auto"></div><p>ผู้อนุมัติ (Approved By)</p></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-8 text-center text-sm mt-8">
+                            <div class="space-y-8"><div class="border-b border-black w-3/4 mx-auto"></div><p>ผู้รับของ/ผู้รับเงิน (Received By)</p></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="overflow-x-auto border rounded-lg max-h-[500px]">
-                    <table class="w-full text-sm border-collapse">
-                        <thead class="bg-gray-100 text-xs uppercase sticky top-0">
+            </div>
+
+            <div id="page-history" class="hidden">
+                <h2 class="text-2xl font-bold mb-4">ประวัติเอกสาร</h2>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-100">
                             <tr>
-                                <th class="p-2 border text-left w-24">สถานะ</th>
-                                <th class="p-2 border text-left w-32">Ref / Voucher</th>
-                                <th class="p-2 border text-left">รายละเอียด</th>
-                                <th class="p-2 border text-right bg-blue-50 w-28">ยอด ภพ.30</th>
-                                <th class="p-2 border text-right bg-orange-50 w-28">ยอด GL</th>
-                                <th class="p-2 border text-right w-24">ผลต่าง</th>
+                                <th class="p-3 sortable" onclick="sortDocs('date')">วันที่ <i class="fa-solid fa-sort text-xs"></i></th>
+                                <th class="p-3 sortable" onclick="sortDocs('no')">เลขที่ <i class="fa-solid fa-sort text-xs"></i></th>
+                                <th class="p-3">เลขที่บิลผู้ขาย</th>
+                                <th class="p-3 sortable" onclick="sortDocs('vendor')">ผู้ขาย <i class="fa-solid fa-sort text-xs"></i></th>
+                                <th class="p-3 text-right">ยอด</th>
+                                <th class="p-3 text-center">สถานะ</th>
+                                <th class="p-3 text-center w-40">จัดการ</th>
+                                <th class="p-3 text-center">ลบ</th>
                             </tr>
                         </thead>
-                        <tbody id="recon-vat-body">
-                            <tr><td colspan="6" class="p-4 text-center text-gray-400">กรุณา Import GL เพื่อเริ่มเปรียบเทียบ</td></tr>
-                        </tbody>
+                        <tbody id="history-table-body"></tbody>
                     </table>
                 </div>
             </div>
-
-            <div id="content-recon-bank" class="hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 no-print">
-                    <div class="bg-blue-50 p-3 rounded border">
-                        <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-blue-800">1. บัญชี (GL)</h4><div class="flex gap-1"><select id="bank-gl-encoding" class="text-xs border rounded bg-white"><option value="TIS-620">TIS-620</option><option value="UTF-8">UTF-8</option></select><button onclick="document.getElementById('file-bank-gl').click()" class="btn-action bg-blue-600 text-white text-xs py-1">Import GL</button><input type="file" id="file-bank-gl" class="hidden" accept=".csv,.xlsx,.xls" onchange="importGLFile(this, 'bank')"></div></div>
-                        <div class="text-xs text-gray-500" id="bank-gl-status">ยังไม่นำเข้า</div>
-                    </div>
-                    <div class="bg-green-50 p-3 rounded border">
-                        <div class="flex justify-between items-center mb-2"><h4 class="font-bold text-green-800">2. Statement</h4><button onclick="document.getElementById('file-bank-stmt').click()" class="btn-action bg-green-600 text-white text-xs py-1">Import Excel</button><input type="file" id="file-bank-stmt" class="hidden" accept=".xlsx,.xls,.csv" onchange="importBankStmt(this)"></div>
-                        <div class="text-xs text-gray-500" id="bank-stmt-status">ยังไม่นำเข้า</div>
-                        <div class="text-[10px] text-red-400 mt-1">* ไฟล์ Excel ต้องมีหัวตาราง "ถอน" และ "ฝาก"</div>
+            
+            <div id="page-journal" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">สมุดรายวัน (Journal)</h2>
+                    <div class="flex gap-2 items-center">
+                        <select id="journal-filter-type" onchange="renderJournal()" class="border p-1 rounded text-sm bg-white">
+                            <option value="ALL">ทั้งหมด (All Journals)</option>
+                            <option value="PV">PV - สมุดรายวันจ่าย (Payment)</option>
+                            <option value="BILL">Bill - สมุดรายวันซื้อ (Purchase)</option>
+                            <option value="DEP">DEP - สมุดรายวันจ่าย (Deposit)</option>
+                            <option value="EXP">EXP - สมุดรายวันจ่าย (Expense)</option>
+                        </select>
+                        <input type="date" id="journal-start" class="border p-1 rounded text-sm">
+                        <span>ถึง</span>
+                        <input type="date" id="journal-end" class="border p-1 rounded text-sm">
+                        <button onclick="renderJournal()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">ค้นหา</button>
                     </div>
                 </div>
-                
-                <div class="flex justify-center gap-2 mb-4 no-print">
-                    <button onclick="runBankRecon()" class="btn-action bg-indigo-600 text-white text-sm px-6 py-2 shadow-lg hover:bg-indigo-700"><i class="fa-solid fa-sync"></i> Reconcile จับคู่ยอด</button>
-                    <button onclick="exportBankRecon()" class="btn-action bg-gray-600 text-white text-sm px-4 py-2 hover:bg-gray-700"><i class="fa-solid fa-file-excel"></i> Export ผลต่าง</button>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="border rounded p-3 bg-white">
-                        <h4 class="font-bold text-red-600 text-sm mb-2 border-b pb-1">รายการใน GL ที่ไม่พบใน Bank (เช่น เช็คค้างจ่าย)</h4>
-                        <div class="overflow-y-auto max-h-[400px]"><table class="w-full text-xs"><tbody id="table-bank-gl-unmatch"></tbody></table></div>
-                    </div>
-                    <div class="border rounded p-3 bg-white">
-                        <h4 class="font-bold text-orange-600 text-sm mb-2 border-b pb-1">รายการใน Bank ที่ไม่พบใน GL (เช่น ดอกเบี้ย)</h4>
-                        <div class="overflow-y-auto max-h-[400px]"><table class="w-full text-xs"><tbody id="table-bank-stmt-unmatch"></tbody></table></div>
-                    </div>
+                <div class="bg-white rounded border p-4">
+                    <table class="w-full text-sm">
+                        <thead class="bg-cyan-50"><tr><th class="p-2">วันที่</th><th class="p-2">Ref</th><th class="p-2">Acc</th><th class="p-2">Name</th><th class="p-2 text-right">Dr</th><th class="p-2 text-right">Cr</th></tr></thead>
+                        <tbody id="journal-body"></tbody>
+                    </table>
                 </div>
             </div>
+            
+            <div id="page-gl" class="hidden"><h2 class="text-2xl font-bold mb-4">บัญชีแยกประเภท (GL)</h2><div class="bg-white rounded border p-4"><select id="gl-account-selector" onchange="renderGL()" class="border p-2 mb-4"><option>-- เลือกบัญชี --</option></select><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2">วันที่</th><th class="p-2">Ref</th><th class="p-2 text-right">Dr</th><th class="p-2 text-right">Cr</th><th class="p-2 text-right">Balance</th></tr></thead><tbody id="gl-body"></tbody></table></div></div>
+            <div id="page-trialbal" class="hidden"><h2 class="text-2xl font-bold mb-4">งบทดลอง</h2><div class="bg-white rounded border p-6"><div class="flex gap-2 items-center mb-4"><span>ช่วงเวลา:</span><input type="date" id="tb-start" class="border p-1 rounded text-sm"><span>ถึง</span><input type="date" id="tb-end" class="border p-1 rounded text-sm"><button onclick="renderTrialBalance()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">แสดงงบ</button><button onclick="exportTableToExcel('tb-table', 'Trial_Balance')" class="bg-green-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-file-excel"></i> Export Excel</button></div><table class="w-full text-sm" id="tb-table"><thead class="bg-gray-100 font-bold border-y-2"><tr><th class="p-2">รหัส</th><th class="p-2">ชื่อบัญชี</th><th class="p-2 text-right">Dr</th><th class="p-2 text-right">Cr</th></tr></thead><tbody id="tb-body"></tbody><tfoot class="font-bold border-y-2"><tr><td colspan="2" class="p-2">Total</td><td class="p-2 text-right" id="tb-sum-dr">0</td><td class="p-2 text-right" id="tb-sum-cr">0</td></tr></tfoot></table></div></div>
+            <div id="page-coa" class="hidden"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">ผังบัญชี</h2><button onclick="openAccModal()" class="bg-blue-600 text-white px-3 py-1 rounded">+ เพิ่มบัญชี</button></div><div class="bg-white rounded border p-4"><button onclick="if(confirm('Reset?')) initCOA()" class="mb-4 bg-gray-200 px-3 py-1 rounded text-sm">Reset Default</button><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2">รหัส</th><th class="p-2">ชื่อบัญชี</th><th class="p-2">หมวด</th><th class="p-2 text-center">จัดการ</th></tr></thead><tbody id="coa-body"></tbody></table></div></div>
+            <div id="page-ap_report" class="hidden"><h2 class="text-2xl font-bold mb-4">เจ้าหนี้คงค้าง</h2><div class="bg-white rounded border p-4"><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-3">ชื่อผู้ขาย</th><th class="p-3 text-right">หนี้ (ตปท.)</th><th class="p-3 text-right">หนี้ (THB)</th></tr></thead><tbody id="ap-report-body"></tbody></table></div></div>
+            <div id="page-vendor" class="hidden"><div class="flex justify-between mb-4"><h2 class="text-xl font-bold">ฐานข้อมูลผู้ขาย</h2><button onclick="openVendorModal()" class="bg-blue-600 text-white px-3 py-1 rounded shadow hover:bg-blue-700">+ เพิ่มผู้ขายใหม่</button></div><div id="vendor-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div></div>
+            <div id="page-stock" class="hidden"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-slate-800">สต็อกสินค้า (ขาเข้า)</h2><div class="flex gap-2"><button onclick="exportTableToExcel('stock-table','Stock_Report')" class="bg-green-600 text-white px-3 py-2 rounded text-sm shadow"><i class="fa-solid fa-file-excel"></i> Excel</button><input type="file" id="import-stock-file" accept=".csv" class="hidden" onchange="importStockCSV(this)"><button onclick="document.getElementById('import-stock-file').click()" class="bg-blue-600 text-white px-3 py-2 rounded text-sm shadow"><i class="fa-solid fa-file-import"></i> Import CSV</button><button onclick="if(confirm('ยืนยันล้างสต็อกทั้งหมด?')) clearStock()" class="bg-red-100 text-red-600 px-3 py-2 rounded text-sm border border-red-200">ล้างระบบ</button></div></div><div class="bg-white rounded-xl shadow-sm border overflow-hidden"><div class="overflow-y-auto max-h-[600px]"><table class="w-full text-sm text-left" id="stock-table"><thead class="bg-gray-100 sticky top-0 font-bold text-gray-700"><tr><th class="p-3">ชื่อสินค้า</th><th class="p-3 text-right">ยอดยกมา</th><th class="p-3 text-right text-green-600">ซื้อเข้า (+)</th><th class="p-3 text-right text-red-500">ส่งคืน (-)</th><th class="p-3 text-right text-blue-600">คงเหลือ</th></tr></thead><tbody id="stock-list-body" class="divide-y"></tbody></table></div></div></div>
+            <div id="page-vat_report" class="hidden"><h2 class="text-2xl font-bold mb-4">รายงานภาษีซื้อ (Input VAT)</h2><div class="bg-white rounded border p-4"><div class="mb-4 flex gap-2"><button onclick="window.print()" class="bg-slate-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-print"></i> พิมพ์รายงาน</button></div><table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2">วันที่</th><th class="p-2">เลขที่ใบกำกับ</th><th class="p-2">เลขที่บิลผู้ขาย</th><th class="p-2">ผู้ขาย</th><th class="p-2 text-right">มูลค่าสินค้า (Base)</th><th class="p-2 text-right">ภาษี (VAT 7%)</th><th class="p-2 text-right">รวมทั้งสิ้น</th></tr></thead><tbody id="vat-report-body"></tbody><tfoot class="font-bold bg-gray-50 border-t"><tr><td colspan="4" class="p-2 text-right">รวมทั้งสิ้น</td><td class="p-2 text-right" id="sum-vat-base">0.00</td><td class="p-2 text-right" id="sum-vat-amt">0.00</td><td class="p-2 text-right" id="sum-vat-total">0.00</td></tr></tfoot></table></div></div>
+            
+            <div id="page-settings" class="hidden">
+                 <h2 class="text-2xl font-bold mb-6">ตั้งค่ากิจการ</h2>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     <div class="space-y-6">
+                        <div class="bg-white p-6 rounded border shadow-sm">
+                            <h3 class="font-bold mb-4 text-blue-800"><i class="fa-solid fa-address-card"></i> 1. ข้อมูลทั่วไป (ส่วนตัว)</h3>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">ที่อยู่ผู้ขาย (Seller Info)</label>
+                            <textarea id="set-my-info" class="w-full border p-3 rounded h-24 bg-gray-50 text-sm placeholder-gray-400" placeholder="ชื่อบริษัท ที่อยู่ และเลขผู้เสียภาษี..."></textarea>
+                            <label class="block text-sm font-bold text-gray-600 mt-4 mb-1">ข้อมูลบัญชีธนาคาร (ท้ายบิล)</label>
+                            <textarea id="set-bank-info" class="w-full border p-3 rounded h-20 bg-gray-50 text-sm placeholder-gray-400" placeholder="เช่น ธ.กสิกรไทย เลขที่ 123-456-7890 ชื่อบัญชี..."></textarea>
+                            
+                            <div class="mt-4">
+                                <label class="block text-sm font-bold text-gray-600 mb-2">ระบบภาษี</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center gap-2"><input type="radio" name="vat-sys" value="yes" checked> จด VAT 7%</label>
+                                    <label class="flex items-center gap-2"><input type="radio" name="vat-sys" value="no"> ไม่จด VAT</label>
+                                </div>
+                            </div>
 
+                            <div class="mt-4 pt-4 border-t">
+                                <label class="block text-sm font-bold text-gray-600 mb-2">ระบบบัญชีสต็อก</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center gap-2"><input type="radio" name="inv-sys" value="periodic" checked> Periodic</label>
+                                    <label class="flex items-center gap-2"><input type="radio" name="inv-sys" value="perpetual"> Perpetual</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded border shadow-sm">
+                            <h3 class="font-bold mb-4 text-purple-800"><i class="fa-solid fa-list-ol"></i> 2. ตั้งค่าเลขที่เอกสาร (Running No.)</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500">เลขที่ PO ถัดไป</label>
+                                    <input type="text" id="set-next-po" class="input-box bg-purple-50" placeholder="PO-24001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500">เลขที่ Bill ถัดไป</label>
+                                    <input type="text" id="set-next-bill" class="input-box bg-purple-50" placeholder="BILL-24001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500">เลขที่ PV ถัดไป</label>
+                                    <input type="text" id="set-next-pv" class="input-box bg-purple-50" placeholder="PV-24001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500">เลขที่ EXP ถัดไป</label>
+                                    <input type="text" id="set-next-exp" class="input-box bg-purple-50" placeholder="EXP-24001">
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">* ระบบจะรันต่อจากเลขนี้อัตโนมัติ</p>
+                        </div>
+                     </div>
+
+                     <div class="space-y-6">
+                         <div class="bg-orange-50 p-6 rounded border border-orange-200 h-fit">
+                             <h3 class="font-bold text-orange-800 mb-4">3. สำรองข้อมูล (Backup)</h3>
+                             <button onclick="exportBackup()" class="w-full bg-white border border-orange-300 text-orange-800 font-bold py-2 rounded shadow-sm mb-4"><i class="fa-solid fa-download"></i> Download JSON</button>
+                             <hr class="border-orange-200 mb-4">
+                             <h4 class="font-bold text-sm text-orange-800 mb-2">กู้คืนข้อมูล (Restore)</h4>
+                             <input type="file" id="restore-file" class="w-full text-sm bg-white border p-1 rounded mb-2" onchange="importRestore(this)">
+                             <hr class="border-orange-200 my-4">
+                             <button onclick="factoryReset()" class="w-full bg-red-600 text-white font-bold py-2 rounded shadow hover:bg-red-700"><i class="fa-solid fa-triangle-exclamation"></i> ล้างข้อมูลทั้งหมด</button>
+                         </div>
+                         
+                         <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-4 rounded shadow-lg text-lg hover:bg-blue-700">บันทึกการตั้งค่าทั้งหมด</button>
+                     </div>
+                 </div>
+            </div>
         </div>
     </div>
 
+    <div id="vendor-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl"><h3 class="text-xl font-bold mb-4" id="v-modal-title">ผู้ขาย</h3><input type="hidden" id="v-id-edit"><input type="text" id="v-name" class="input-box mb-2" placeholder="ชื่อผู้ขาย (บริษัท/ร้านค้า)"><textarea id="v-addr" class="input-box h-24 mb-2" placeholder="ที่อยู่ และ เลขผู้เสียภาษี..."></textarea><div class="mb-2"><label class="text-xs font-bold">ประเภทบัญชี</label><select id="v-acc-type" class="input-box bg-blue-50"><option value="2000">เจ้าหนี้การค้า (2000)</option><option value="2010">เจ้าหนี้อื่น (2010)</option></select></div><div class="grid grid-cols-2 gap-2 mt-2"><select id="v-zone" class="input-box"><option value="local">ในประเทศ</option><option value="foreign">ต่างประเทศ</option></select><select id="v-currency" class="input-box"><option value="THB">THB</option><option value="USD">USD</option><option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option></select></div><button onclick="saveVendor()" class="mt-4 w-full bg-blue-600 text-white py-2 rounded">บันทึก</button><button onclick="document.getElementById('vendor-modal').classList.add('hidden')" class="mt-2 w-full text-gray-500">ปิด</button></div></div>
+    <div id="deposit-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl"><h3 class="text-xl font-bold mb-4">เลือกมัดจำ</h3><div class="overflow-y-auto max-h-[300px] border rounded"><table class="w-full text-sm"><tbody id="deposit-list-body"></tbody></table></div><button onclick="document.getElementById('deposit-modal').classList.add('hidden')" class="mt-4 w-full bg-gray-200 py-2 rounded">ปิด</button></div></div>
+    <div id="vendor-history-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-3xl shadow-2xl h-[80vh] flex flex-col"><div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="text-xl font-bold" id="vh-title">ประวัติ</h3><button onclick="document.getElementById('vendor-history-modal').classList.add('hidden')" class="text-gray-500 font-bold text-xl">&times;</button></div><div class="overflow-y-auto flex-1"><table class="w-full text-sm text-left"><thead class="bg-gray-100 sticky top-0"><tr><th class="p-3">วันที่</th><th class="p-3">เลขที่</th><th class="p-3">ประเภท</th><th class="p-3 text-right">ยอดเงิน</th><th class="p-3 text-center">สถานะ</th></tr></thead><tbody id="vh-list-body" class="divide-y"></tbody></table></div><div class="mt-4 pt-2 border-t flex justify-end"><div class="text-right"><span class="text-gray-600 text-sm">รวม:</span><span class="font-bold text-xl ml-2 text-blue-600" id="vh-total">0.00</span></div></div></div></div>
+    <div id="account-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50"><div class="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl"><h3 class="text-xl font-bold mb-4">จัดการผังบัญชี</h3><input type="text" id="acc-code" class="input-box mb-2" placeholder="รหัสบัญชี"><input type="text" id="acc-name" class="input-box mb-2" placeholder="ชื่อบัญชี"><select id="acc-type" class="input-box"><option value="Asset">สินทรัพย์</option><option value="Liability">หนี้สิน</option><option value="Equity">ทุน</option><option value="Revenue">รายได้</option><option value="Expense" selected>ค่าใช้จ่าย</option></select><button onclick="saveAccount()" class="mt-4 w-full bg-blue-600 text-white py-2 rounded">บันทึก</button><button onclick="document.getElementById('account-modal').classList.add('hidden')" class="mt-2 w-full text-gray-500">ปิด</button></div></div>
+
+    <datalist id="product-list"></datalist><datalist id="account-list"></datalist>
+
     <script>
-        // --- DATA STRUCTURE ---
-        let appData = { 
-            client: '', 
-            audit: [], // VAT Report Data (Tab 1)
-            vatGL: [], // VAT GL Data (Tab 2)
-            vatReconResult: [], // Result of Tab 2
-            bankGL: [], // Bank GL Data (Tab 3)
-            bankStmt: [], // Bank Stmt Data (Tab 3)
-            bankUnmatchGL: [], bankUnmatchStmt: [] // Result of Tab 3
+        const firebaseConfig = { apiKey: "AIzaSyDGjw7KNA-eMV5qbg8ul6Xh5KiVS11Gc4E", authDomain: "m-finapp.firebaseapp.com", projectId: "m-finapp" };
+        firebase.initializeApp(firebaseConfig);
+        const db=firebase.firestore(), auth=firebase.auth();
+
+        let DOCUMENTS=[], VENDORS=[], PRODUCTS=[], SETTINGS={}, ACCOUNTS=[], JOURNAL=[];
+        let CUR_DOC_ID=null, CUR_USER=null;
+        let CURRENT_DOC_TYPE = 'PO'; 
+        let SORT_COL = 'date'; let SORT_ASC = false;
+
+        // --- UPDATED COA (หมวด 7 แยกประเภทตามที่คุณต้องการ) ---
+        const DEFAULT_COA = [
+            // 1. สินทรัพย์ (Assets)
+            {code:'1000', name:'เงินสด (Cash)', type:'Asset'}, 
+            {code:'1001', name:'เงินฝากธนาคาร (Bank)', type:'Asset'}, 
+            {code:'1150', name:'ภาษีซื้อ (Input VAT)', type:'Asset'}, 
+            {code:'1160', name:'เงินมัดจำจ่ายล่วงหน้า', type:'Asset'}, 
+            {code:'1200', name:'สินค้าคงเหลือ (Inventory)', type:'Asset'}, 
+            {code:'1400', name:'ที่ดิน อาคาร และอุปกรณ์', type:'Asset'}, 
+            
+            // 2. หนี้สิน (Liabilities)
+            {code:'2000', name:'เจ้าหนี้การค้า (AP Trade)', type:'Liability'}, 
+            {code:'2010', name:'เจ้าหนี้อื่น (Other Payables)', type:'Liability'}, 
+            {code:'2100', name:'ค่าใช้จ่ายค้างจ่าย', type:'Liability'},
+            
+            // 3. ทุน (Equity)
+            {code:'3000', name:'ทุนจดทะเบียน', type:'Equity'}, 
+            
+            // 5. ต้นทุนขาย (Cost of Sales)
+            {code:'5100', name:'ต้นทุนขาย-สินค้า', type:'Expense'},
+            {code:'5101', name:'ซื้อสินค้า (Purchases)', type:'Expense'},
+            {code:'5102', name:'ค่าระวางขนส่ง-ขาเข้า (Freight In)', type:'Expense'},
+            {code:'5103', name:'ค่าอากรขาเข้า', type:'Expense'},
+            
+            // 6. ค่าใช้จ่ายในการขาย (Selling Expenses)
+            {code:'5200', name:'เงินเดือนพนักงานขาย', type:'Expense'},
+            {code:'5201', name:'ค่านายหน้า (Commission)', type:'Expense'},
+            {code:'5202', name:'ค่าโฆษณาและส่งเสริมการขาย', type:'Expense'},
+            {code:'5203', name:'ค่าขนส่ง-ขาออก (Freight Out)', type:'Expense'},
+            {code:'5204', name:'ค่ารับรองลูกค้า', type:'Expense'},
+            
+            // 7. ค่าใช้จ่ายบริหาร (Admin Expenses)
+            {code:'5300', name:'เงินเดือนผู้บริหารและพนักงานสนง.', type:'Expense'},
+            {code:'5301', name:'ค่าสวัสดิการพนักงาน', type:'Expense'},
+            {code:'5302', name:'ค่าเช่าสำนักงาน', type:'Expense'},
+            {code:'5303', name:'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์', type:'Expense'},
+            {code:'5304', name:'ค่าเครื่องเขียนแบบพิมพ์', type:'Expense'},
+            {code:'5305', name:'ค่าซ่อมแซมบำรุงรักษา', type:'Expense'},
+            {code:'5306', name:'ค่าทำบัญชีและสอบบัญชี', type:'Expense'}, // บัญชีที่คุณถามถึง
+            {code:'5307', name:'ค่าธรรมเนียมธนาคาร', type:'Expense'},
+            {code:'5308', name:'ค่าเบี้ยประกันภัย', type:'Expense'},
+            {code:'5399', name:'ค่าใช้จ่ายเบ็ดเตล็ด', type:'Expense'},
+            
+            // 8. รายการพิเศษ
+            {code:'8100', name:'กำไร(ขาดทุน)จากอัตราแลกเปลี่ยน', type:'Expense'}
+        ];
+
+        window.onload=()=>{
+            auth.onAuthStateChanged(u=>{
+                if(u){ CUR_USER=u; document.getElementById('user-display').innerText=u.email; 
+                       document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); 
+                       initApp(u.uid); }
+                else { document.getElementById('login-screen').classList.remove('hidden'); document.getElementById('app-container').classList.add('hidden'); }
+            });
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('journal-end').value = today; document.getElementById('tb-end').value = today;
+            const firstDay = new Date(); firstDay.setDate(1);
+            document.getElementById('journal-start').value = firstDay.toISOString().split('T')[0]; document.getElementById('tb-start').value = firstDay.toISOString().split('T')[0];
         };
 
-        // --- INIT ---
-        document.addEventListener('DOMContentLoaded', () => { loadData(); renderAll(); });
-        function saveData() { appData.client=document.getElementById('client-name').value; localStorage.setItem('m_audit_platinum', JSON.stringify(appData)); const s=document.getElementById('save-status'); s.style.opacity='1'; setTimeout(()=>s.style.opacity='0',1000); }
-        function loadData() { const d=JSON.parse(localStorage.getItem('m_audit_platinum')); if(d) appData=d; }
-        function clearAll() { if(confirm('ล้างข้อมูลทั้งหมด?')) { localStorage.removeItem('m_audit_platinum'); location.reload(); } }
-        function renderAll() { document.getElementById('client-name').value=appData.client||''; renderAudit(); if(appData.vatGL.length>0) runVatRecon(); updateBankUI(); }
-        function switchTab(t) { ['audit','recon-vat','recon-bank'].forEach(x=>{ document.getElementById('content-'+x).classList.add('hidden'); document.getElementById('tab-'+x).className="tab-btn"; }); document.getElementById('content-'+t).classList.remove('hidden'); document.getElementById('tab-'+t).className="tab-btn tab-active"; }
+        function initApp(uid){
+            db.collection('app_purchase_docs').where('oid','==',uid).onSnapshot(s=>{DOCUMENTS=[];s.forEach(d=>DOCUMENTS.push(d.data())); sortDocs('date', false); }); 
+            db.collection('app_purchase_vendors').where('oid','==',uid).onSnapshot(s=>{VENDORS=[];s.forEach(d=>VENDORS.push({id:d.id,...d.data()}));renderVendors();updateVendorPicker();});
+            db.collection('app_purchase_products').where('oid','==',uid).onSnapshot(s=>{PRODUCTS=[];s.forEach(d=>PRODUCTS.push(d.data()));updateProductDatalist();renderStock();});
+            db.collection('app_purchase_settings').doc(uid).onSnapshot(d=>{if(d.exists){SETTINGS=d.data(); loadSettingsUI();}});
+            db.collection('app_purchase_accounts').where('oid','==',uid).onSnapshot(s=>{ACCOUNTS=[];s.forEach(d=>ACCOUNTS.push(d.data())); if(ACCOUNTS.length===0)initCOA(); else{renderCOA(); renderAccountSelector(); updateAccountDatalist();} });
+            db.collection('app_purchase_journal').where('oid','==',uid).onSnapshot(s=>{JOURNAL=[];s.forEach(d=>JOURNAL.push(d.data()));renderJournal();renderTrialBalance();renderGL();});
+            document.getElementById('doc-date').valueAsDate=new Date();
+            addItem(); setDocType('PO'); 
+        }
 
-        // --- PART 1: AUDIT VAT ---
-        function importAuditFile(input) {
-            const file=input.files[0]; if(!file)return;
-            const encoding=document.getElementById('audit-encoding').value;
-            const reader=new FileReader();
-            reader.onload=e=>{
-                const decoder=new TextDecoder(encoding);
-                const wb=XLSX.read(decoder.decode(e.target.result), {type:'string'});
-                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:false});
-                let items=[];
-                data.forEach(row=>{
-                    if(row.length<5) return;
-                    let dateStr=String(row[1]||"").trim();
-                    if(!dateStr.match(/^\d{2}\/\d{2}\/\d{2,4}$/)) return;
-                    let base=parseFloat(String(row[9]||"0").replace(/,/g,'')), tax=parseFloat(String(row[10]||"0").replace(/,/g,''));
-                    if(isNaN(base)){ let nums=row.filter(c=>!isNaN(parseFloat(String(c).replace(/,/g,'')))); if(nums.length>=2){tax=parseFloat(String(nums[nums.length-1])); base=parseFloat(String(nums[nums.length-2]));} }
-                    if(!isNaN(base)) items.push({ id:Math.random(), date:dateStr, inv:String(row[2]||"-").trim(), ref:String(row[4]||"").trim(), vendor:String(row[5]||"-").trim(), taxId:String(row[6]||"-").replace(/[^0-9]/g,''), base:base, tax:tax, note:'', checked:true });
+        function sortDocs(col, forceAsc) {
+            if (forceAsc !== undefined) { SORT_ASC = forceAsc; } else if (SORT_COL === col) { SORT_ASC = !SORT_ASC; } else { SORT_COL = col; SORT_ASC = true; }
+            DOCUMENTS.sort((a, b) => { let valA = a[col] || ''; let valB = b[col] || ''; if (col === 'vendor') { valA = a.vendorInfo.split('\n')[0]; valB = b.vendorInfo.split('\n')[0]; } if (valA < valB) return SORT_ASC ? -1 : 1; if (valA > valB) return SORT_ASC ? 1 : -1; return 0; });
+            renderUI();
+        }
+
+        function getNextDocNo(type) {
+            let nextNo = "";
+            if (type === 'PO' && SETTINGS.nextNo_PO) nextNo = SETTINGS.nextNo_PO;
+            else if (type === 'BILL' && SETTINGS.nextNo_BILL) nextNo = SETTINGS.nextNo_BILL;
+            else if (type === 'PV' && SETTINGS.nextNo_PV) nextNo = SETTINGS.nextNo_PV;
+            else if (type === 'EXP' && SETTINGS.nextNo_EXP) nextNo = SETTINGS.nextNo_EXP;
+            else if (type === 'DEP' && SETTINGS.nextNo_DEP) nextNo = SETTINGS.nextNo_DEP;
+            if (!nextNo) { nextNo = `${type}-${new Date().getFullYear().toString().substr(-2)}${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`; }
+            return nextNo;
+        }
+
+        function incrementNextDocNo(type, currentNo) {
+            const match = currentNo.match(/(\d+)$/);
+            if (match) {
+                const num = parseInt(match[0]) + 1;
+                const prefix = currentNo.substring(0, match.index);
+                const nextNo = prefix + String(num).padStart(match[0].length, '0');
+                const updateData = {};
+                if (type === 'PO') updateData.nextNo_PO = nextNo;
+                else if (type === 'BILL') updateData.nextNo_BILL = nextNo;
+                else if (type === 'PV') updateData.nextNo_PV = nextNo;
+                else if (type === 'EXP') updateData.nextNo_EXP = nextNo;
+                else if (type === 'DEP') updateData.nextNo_DEP = nextNo;
+                db.collection('app_purchase_settings').doc(CUR_USER.uid).set(updateData, {merge: true});
+            }
+        }
+
+        function initCOA() { const b=db.batch(); DEFAULT_COA.forEach(a=>b.set(db.collection('app_purchase_accounts').doc(a.code),{...a,oid:CUR_USER.uid})); b.commit(); }
+        function renderCOA() { const t=document.getElementById('coa-body'); t.innerHTML=''; ACCOUNTS.sort((a,b)=>a.code.localeCompare(b.code)).forEach(a=>{ t.innerHTML+=`<tr class="border-b"><td class="p-2">${a.code}</td><td class="p-2">${a.name}</td><td class="p-2">${a.type}</td><td class="p-2 text-center"><button onclick="editAccount('${a.code}')" class="text-blue-500 mr-2"><i class="fa-solid fa-pen"></i></button><button onclick="deleteAccount('${a.code}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`; }); }
+        function renderAccountSelector() { const s=document.getElementById('gl-account-selector'); s.innerHTML='<option value="">-- เลือกบัญชี --</option>'; ACCOUNTS.forEach(a=>s.innerHTML+=`<option value="${a.code}">${a.code} - ${a.name}</option>`); }
+        function openAccModal(){ document.getElementById('account-modal').classList.remove('hidden'); document.getElementById('acc-code').value=''; document.getElementById('acc-name').value=''; document.getElementById('acc-code').disabled = false; }
+        function saveAccount(){ const code = document.getElementById('acc-code').value; const name = document.getElementById('acc-name').value; if(!code || !name) return alert('กรุณากรอกข้อมูลให้ครบ'); db.collection('app_purchase_accounts').doc(code).set({ code: code, name: name, type: document.getElementById('acc-type').value, oid: CUR_USER.uid }).then(()=>{ document.getElementById('account-modal').classList.add('hidden'); alert('บันทึกเรียบร้อย'); }); }
+        function editAccount(code) { const acc = ACCOUNTS.find(a => a.code === code); if(acc) { openAccModal(); document.getElementById('acc-code').value = acc.code; document.getElementById('acc-code').disabled = true; document.getElementById('acc-name').value = acc.name; document.getElementById('acc-type').value = acc.type; } }
+        function deleteAccount(code) { if(confirm('ยืนยันลบบัญชีนี้?')) { db.collection('app_purchase_accounts').doc(code).delete().then(()=>alert('ลบเรียบร้อย')); } }
+        function calculateDashboard() { const stats = DOCUMENTS.reduce((acc, d) => { if (d.type === 'BILL' || d.type === 'EXP') acc.buy += d.totalTHB; if ((d.type === 'BILL' || d.type === 'DEP') && d.status === 'UNPAID') acc.pending += d.totalTHB; if (d.type === 'PV' || d.type === 'EXP') acc.paid += d.totalTHB; return acc; }, { buy: 0, pending: 0, paid: 0 }); document.getElementById('dash-total').innerText = stats.buy.toLocaleString(undefined, {minimumFractionDigits: 2}); document.getElementById('dash-pending').innerText = stats.pending.toLocaleString(undefined, {minimumFractionDigits: 2}); document.getElementById('dash-paid').innerText = stats.paid.toLocaleString(undefined, {minimumFractionDigits: 2}); }
+        
+        function loadSettingsUI() { 
+            document.getElementById('set-my-info').value = SETTINGS.info || ""; 
+            document.getElementById('my-info').value = SETTINGS.info || ""; 
+            document.getElementById('set-bank-info').value = SETTINGS.bankInfo || ""; 
+            document.getElementById('bank-info-display').innerText = SETTINGS.bankInfo || ""; 
+            document.getElementsByName('inv-sys').forEach(r => { if(r.value === (SETTINGS.invSystem || 'periodic')) r.checked = true; }); 
+            document.getElementsByName('vat-sys').forEach(r => { if(r.value === (SETTINGS.vatSystem || 'yes')) r.checked = true; }); 
+            document.getElementById('use-vat').checked = (SETTINGS.vatSystem !== 'no');
+            document.getElementById('set-next-po').value = SETTINGS.nextNo_PO || "";
+            document.getElementById('set-next-bill').value = SETTINGS.nextNo_BILL || "";
+            document.getElementById('set-next-pv').value = SETTINGS.nextNo_PV || "";
+            document.getElementById('set-next-exp').value = SETTINGS.nextNo_EXP || "";
+            document.getElementById('set-next-dep').value = SETTINGS.nextNo_DEP || "";
+        }
+        
+        function saveSettings() { 
+            const data = { 
+                info: document.getElementById('set-my-info').value, 
+                bankInfo: document.getElementById('set-bank-info').value, 
+                invSystem: document.querySelector('input[name="inv-sys"]:checked').value, 
+                vatSystem: document.querySelector('input[name="vat-sys"]:checked').value,
+                nextNo_PO: document.getElementById('set-next-po').value,
+                nextNo_BILL: document.getElementById('set-next-bill').value,
+                nextNo_PV: document.getElementById('set-next-pv').value,
+                nextNo_EXP: document.getElementById('set-next-exp').value,
+                nextNo_DEP: document.getElementById('set-next-dep').value
+            }; 
+            db.collection('app_purchase_settings').doc(CUR_USER.uid).set(data, {merge: true}).then(() => alert('บันทึกการตั้งค่าเรียบร้อย')); 
+        }
+        
+        function openVendorModal(id = null) { document.getElementById('vendor-modal').classList.remove('hidden'); if (id) { const v = VENDORS.find(x => x.id === id); document.getElementById('v-modal-title').innerText = 'แก้ไขผู้ขาย'; document.getElementById('v-id-edit').value = id; document.getElementById('v-name').value = v.name; document.getElementById('v-addr').value = v.addr; document.getElementById('v-zone').value = v.zone; document.getElementById('v-currency').value = v.currency; document.getElementById('v-acc-type').value = v.accType || '2000'; } else { document.getElementById('v-modal-title').innerText = 'เพิ่มผู้ขายใหม่'; document.getElementById('v-id-edit').value = ''; document.getElementById('v-name').value = ''; document.getElementById('v-addr').value = ''; document.getElementById('v-acc-type').value = '2000'; } }
+        function saveVendor() { const id = document.getElementById('v-id-edit').value; const data = { name: document.getElementById('v-name').value, addr: document.getElementById('v-addr').value, zone: document.getElementById('v-zone').value, currency: document.getElementById('v-currency').value, accType: document.getElementById('v-acc-type').value, oid: CUR_USER.uid }; if (id) db.collection('app_purchase_vendors').doc(id).update(data).then(() => document.getElementById('vendor-modal').classList.add('hidden')); else db.collection('app_purchase_vendors').add(data).then(() => document.getElementById('vendor-modal').classList.add('hidden')); }
+        function renderVendors() { const g = document.getElementById('vendor-grid'); g.innerHTML = ''; VENDORS.forEach(v => { g.innerHTML += `<div class="bg-white p-5 shadow rounded border border-gray-200 hover:shadow-md transition"><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-lg text-slate-800">${v.name}</h3><div class="flex gap-1"><button onclick="openVendorModal('${v.id}')" class="text-blue-500 hover:bg-blue-50 p-1 rounded"><i class="fa-solid fa-pen"></i></button><button onclick="viewVendorHistory('${v.id}')" class="text-orange-500 hover:bg-orange-50 p-1 rounded"><i class="fa-solid fa-clock-rotate-left"></i></button></div></div><div class="text-sm text-gray-500 mb-2 h-10 overflow-hidden text-ellipsis">${v.addr || '-'}</div><div class="flex justify-between items-center text-xs font-bold mt-2"><span class="bg-gray-100 px-2 py-1 rounded text-gray-600">${v.zone.toUpperCase()}</span><span class="text-green-600">${v.currency}</span></div></div>`; }); }
+        function viewVendorHistory(vid) { const v = VENDORS.find(x => x.id === vid); document.getElementById('vh-title').innerText = `ประวัติ: ${v.name}`; const tbody = document.getElementById('vh-list-body'); tbody.innerHTML = ''; const history = DOCUMENTS.filter(d => d.vid === vid); let total = 0; if(history.length === 0) tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">ยังไม่มีประวัติการทำรายการ</td></tr>`; else history.forEach(d => { total += d.totalTHB; let stClass = d.status==='PAID'?'text-green-600 bg-green-50':(d.status==='PENDING'?'text-blue-600 bg-blue-50':'text-red-600 bg-red-50'); tbody.innerHTML += `<tr class="border-b"><td class="p-3">${d.date}</td><td class="p-3 font-bold">${d.no}</td><td class="p-3"><span class="text-xs border px-1 rounded">${d.type}</span></td><td class="p-3 text-right">${d.total.toLocaleString()} ${d.currency}</td><td class="p-3 text-center"><span class="text-xs px-2 py-1 rounded font-bold ${stClass}">${d.status}</span></td></tr>`; }); document.getElementById('vh-total').innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2}) + " THB"; document.getElementById('vendor-history-modal').classList.remove('hidden'); }
+
+        function setDocType(t){
+             CUR_DOC_ID=null; CURRENT_DOC_TYPE = t; 
+             const m={PO:['ใบสั่งซื้อ','PURCHASE ORDER'], BILL:['ตั้งเจ้าหนี้ (Bill)','AP BILL'], DEP:['จ่ายมัดจำ','DEPOSIT'], PV:['ใบสำคัญจ่าย','PAYMENT VOUCHER'], DN:['ส่งคืน/ลดหนี้','DEBIT NOTE'], EXP:['บันทึกค่าใช้จ่าย','EXPENSE VOUCHER']};
+             document.getElementById('doc-title').innerText=m[t][0];
+             document.getElementById('doc-no').value = getNextDocNo(t);
+             ['btn-po','btn-bill','btn-pv','btn-dn','btn-dep','btn-exp'].forEach(b=>document.getElementById(b).className="px-3 py-1 rounded font-bold border text-sm hover:bg-gray-100");
+             document.getElementById('btn-'+t.toLowerCase()).className="px-3 py-1 rounded font-bold border text-sm bg-orange-100 text-orange-800";
+             if (t === 'EXP') { document.getElementById('th-item-name').innerText = "ชื่อบัญชีค่าใช้จ่าย"; document.querySelectorAll('#item-list input[list]').forEach(i => i.setAttribute('list', 'account-list')); } 
+             else { document.getElementById('th-item-name').innerText = "รายการสินค้า"; document.querySelectorAll('#item-list input[list]').forEach(i => i.setAttribute('list', 'product-list')); }
+             if(t === 'BILL') document.getElementById('deposit-box').classList.remove('hidden'); else { document.getElementById('deposit-box').classList.add('hidden'); resetDeposit(); }
+             document.getElementById('doc-ref-display').value = ""; 
+             document.getElementById('vendor-inv-no').value = ""; 
+             document.getElementById('ref-amount-thb').value = "";
+        }
+
+        function addItem(d='',q=1,p=0) { const t=document.getElementById('item-list'); const r=document.createElement('tr'); r.className='border-b item-row'; const listId = CURRENT_DOC_TYPE === 'EXP' ? 'account-list' : 'product-list'; r.innerHTML=`<td class="p-2"><input class="input-box bg-transparent border-none w-full" list="${listId}" value="${d}" placeholder="..." onchange="autoFillPrice(this)"></td><td class="p-2"><input type="number" class="input-box text-center" value="${q}" oninput="calcTotal()"></td><td class="p-2"><input type="number" class="input-box text-right" value="${p}" oninput="calcTotal()"></td><td class="p-2 text-right font-bold">0.00</td><td class="p-2 text-center"><button onclick="this.closest('tr').remove();calcTotal()" class="text-red-300 no-print">x</button></td>`; t.appendChild(r); calcTotal(); }
+        
+        function calcTotal(){ 
+            let sum=0; const rows = document.querySelectorAll('#item-list tr.item-row');
+            rows.forEach(r=>{ const q=parseFloat(r.cells[1].children[0].value)||0; const p=parseFloat(r.cells[2].children[0].value)||0; r.cells[3].innerText=(q*p).toLocaleString(undefined,{minimumFractionDigits:2}); sum+=q*p; }); 
+            const tbody = document.getElementById('item-list'); document.querySelectorAll('.empty-row').forEach(e => e.remove());
+            const totalRows = 8; const emptyNeeded = Math.max(0, totalRows - rows.length);
+            for(let i=0; i<emptyNeeded; i++) { const emptyRow = document.createElement('tr'); emptyRow.className = 'empty-row border-b'; emptyRow.innerHTML = `<td class="p-2">&nbsp;</td><td></td><td></td><td></td><td class="no-print"></td>`; tbody.appendChild(emptyRow); }
+            document.getElementById('subtotal').innerText=sum.toLocaleString(undefined,{minimumFractionDigits:2}); 
+            const deposit = parseFloat(document.getElementById('deposit-deduct').value) || 0; const taxable = sum - deposit; 
+            const useVat = document.getElementById('use-vat').checked; const vat = useVat ? taxable*0.07 : 0; 
+            document.getElementById('vat').innerText=vat.toLocaleString(undefined,{minimumFractionDigits:2}); 
+            const grand = taxable+vat; document.getElementById('grand-total').innerText=grand.toLocaleString(undefined,{minimumFractionDigits:2}); 
+            const rate = parseFloat(document.getElementById('exchange-rate').value)||1; document.getElementById('grand-total-thb').innerText = (grand*rate).toLocaleString(undefined,{minimumFractionDigits:2}); 
+        }
+
+        function saveDocument(){
+            const docNo = document.getElementById('doc-no').value;
+            if(!CUR_DOC_ID && DOCUMENTS.find(d => d.no === docNo)) {
+                if(!confirm(`เลขที่เอกสาร ${docNo} ซ้ำ! ต้องการบันทึกทับ (แก้ไข) หรือไม่?`)) return;
+                const existDoc = DOCUMENTS.find(d => d.no === docNo);
+                CUR_DOC_ID = existDoc.id; 
+            }
+
+            const docId = CUR_DOC_ID || Date.now(); 
+            const type = CURRENT_DOC_TYPE; 
+            const currency = document.getElementById('vendor-currency').value || 'THB';
+            const rate = parseFloat(document.getElementById('exchange-rate').value) || 1;
+            const grandOrig = parseFloat(document.getElementById('grand-total').innerText.replace(/,/g,''));
+            const grandTHB = parseFloat(document.getElementById('grand-total-thb').innerText.replace(/,/g,''));
+            const depositDeduct = parseFloat(document.getElementById('deposit-deduct').value) || 0;
+            const vid = document.getElementById('vendor-picker').value;
+            const vendorAccType = document.getElementById('vendor-acc-type').value || '2000'; 
+            const refDocId = document.getElementById('ref-doc-id').value; 
+            const refDocNo = document.getElementById('doc-ref-display').value;
+            const vendorInvNo = document.getElementById('vendor-inv-no').value; 
+            const refAmountTHB = parseFloat(document.getElementById('ref-amount-thb').value) || 0;
+
+            if(!vid) return alert("กรุณาเลือกผู้ขาย");
+
+            let docStatus = 'PENDING';
+            if (type === 'DEP' || type === 'PV' || type === 'EXP') docStatus = 'PAID'; 
+            else if (type === 'BILL') docStatus = 'UNPAID';
+
+            const data = {
+                id: parseInt(docId), no: docNo, date: document.getElementById('doc-date').value,
+                type: type, vid: vid, vendorInfo: document.getElementById('vendor-info').value, vendorAccType: vendorAccType,
+                vendorInvNo: vendorInvNo, 
+                total: grandOrig, totalTHB: grandTHB, depositDeduct: depositDeduct, depositRef: document.getElementById('deposit-ref-id').value,
+                currency: currency, rate: rate, items: [], payMethod: document.getElementById('payment-method').value,
+                useVat: document.getElementById('use-vat').checked, 
+                status: docStatus, 
+                oid: CUR_USER.uid, refNo: refDocNo, refId: refDocId,
+                refAmountTHB: refAmountTHB 
+            };
+            
+            document.querySelectorAll('#item-list tr.item-row').forEach(r=>{ data.items.push({ name: r.cells[0].children[0].value, qty: parseFloat(r.cells[1].children[0].value)||0, price: parseFloat(r.cells[2].children[0].value)||0 }); });
+
+            db.collection('app_purchase_journal').where('docId', '==', parseInt(docId)).get().then(snap => { 
+                const batchDel = db.batch(); snap.forEach(doc => batchDel.delete(doc.ref)); return batchDel.commit();
+            }).then(() => {
+                return db.collection('app_purchase_docs').doc(docId.toString()).set(data);
+            }).then(()=>{
+                if(type!=='PO') postToJournal(data);
+                if(data.depositRef) db.collection('app_purchase_docs').doc(data.depositRef.toString()).update({status:'USED'});
+                if(refDocId) {
+                    if (type === 'PV') db.collection('app_purchase_docs').doc(refDocId).update({status:'PAID'});
+                    else if (type === 'BILL' || type === 'DEP') db.collection('app_purchase_docs').doc(refDocId).update({status:'PROCESSED'});
+                }
+                if(!CUR_DOC_ID) incrementNextDocNo(type, data.no);
+                alert('บันทึกเรียบร้อย'); resetForm();
+            });
+        }
+
+        function deleteDocument(id) {
+            if(!confirm('ยืนยันลบเอกสาร?')) return;
+            const doc = DOCUMENTS.find(d => d.id == id);
+            if(doc) {
+                db.collection('app_purchase_docs').doc(id.toString()).delete();
+                db.collection('app_purchase_journal').where('docId', '==', parseInt(id)).get().then(snap => { 
+                    const batch = db.batch(); snap.forEach(doc => batch.delete(doc.ref)); batch.commit();
                 });
-                if(items.length>0) { appData.audit=items; renderAudit(); saveData(); alert(`Import ภพ.30: ${items.length} รายการ`); }
-                input.value='';
-            }; reader.readAsArrayBuffer(file);
+                alert('ลบเรียบร้อย');
+            }
         }
-        function renderAudit() {
-            const tb=document.getElementById('audit-body'); tb.innerHTML='';
-            let tTax=0, cTax=0;
-            appData.audit.forEach((v,i)=>{
-                tTax+=v.tax; if(v.checked) cTax+=v.tax;
-                const cls=v.checked?'row-checked':'row-unchecked';
-                tb.innerHTML+=`<tr class="border-b ${cls}"><td class="p-2 text-center no-print"><input type="checkbox" ${v.checked?'checked':''} onclick="toggleAudit(${i})"></td><td class="p-2 text-xs font-mono">${v.date}</td><td class="p-2 text-xs font-bold text-blue-800">${v.inv}</td><td class="p-2 text-xs truncate max-w-[150px]">${v.vendor}</td><td class="p-2 text-xs text-center font-mono">${v.taxId}</td><td class="p-2 text-right text-sm text-gray-600">${fmt(v.base)}</td><td class="p-2 text-right font-bold text-sm text-gray-800">${fmt(v.tax)}</td><td class="p-2"><input value="${v.note||''}" class="w-full bg-transparent text-xs" placeholder="..." onchange="appData.audit[${i}].note=this.value;saveData()"></td></tr>`;
-            });
-            document.getElementById('sum-audit-total').innerText=fmt(tTax); document.getElementById('cnt-total').innerText=appData.audit.length;
-            document.getElementById('sum-audit-checked').innerText=fmt(cTax); document.getElementById('cnt-checked').innerText=appData.audit.filter(x=>x.checked).length;
-            document.getElementById('sum-audit-unchecked').innerText=fmt(tTax-cTax); document.getElementById('ft-tax').innerText=fmt(cTax);
-            if(appData.vatGL.length>0) runVatRecon();
-        }
-        function toggleAudit(i) { appData.audit[i].checked=!appData.audit[i].checked; renderAudit(); saveData(); }
-        function toggleAllAudit(el) { appData.audit.forEach(v=>v.checked=el.checked); renderAudit(); saveData(); }
-        function searchAndMarkAudit(e) { if(e.key==='Enter'){ const k=e.target.value.trim(); if(!k)return; appData.audit.forEach(v=>{ if(String(v.inv).includes(k)) v.checked=true; }); renderAudit(); saveData(); e.target.value=''; } }
-        function setPrintMode(mode) { document.body.className="p-4 text-slate-800 min-h-screen relative"; if(mode==='checked') document.body.classList.add('print-mode-checked'); if(mode==='unchecked') { document.body.classList.add('print-mode-unchecked'); document.getElementById('ft-tax').innerText=document.getElementById('sum-audit-unchecked').innerText; } window.print(); }
-        function exportAuditExcel() { const d=appData.audit.filter(v=>v.checked).map((v,i)=>({"ลำดับ":i+1,"วันที่":v.date,"เลขใบกำกับ":v.inv,"ชื่อผู้ขาย":v.vendor,"เลขผู้เสียภาษี":v.taxId,"มูลค่า":v.base,"ภาษี":v.tax,"หมายเหตุ":v.note})); const ws=XLSX.utils.json_to_sheet(d); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"VAT"); XLSX.writeFile(wb,"VAT_Output.xlsx"); }
 
-        // --- UNIVERSAL GL IMPORT (SMART DETECT) ---
-        function importGLFile(input, type) {
-            const file=input.files[0]; if(!file)return;
-            const encoding = type==='vat' ? document.getElementById('vat-gl-encoding').value : document.getElementById('bank-gl-encoding').value;
-            const reader=new FileReader();
-            reader.onload=e=>{
-                const decoder=new TextDecoder(encoding);
-                const wb=XLSX.read(decoder.decode(e.target.result),{type:'string'});
-                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1, raw:false});
+        function convertDoc(id, toType) {
+            const src = DOCUMENTS.find(d=>d.id===id); if(!src) return;
+            showPage('create'); setDocType(toType); pickVendor(src.vid);
+            document.getElementById('vendor-picker').value = src.vid; 
+            document.getElementById('item-list').innerHTML=''; src.items.forEach(i=>addItem(i.name, i.qty, i.price));
+            document.getElementById('ref-doc-id').value = src.id;
+            document.getElementById('doc-ref-display').value = src.no; 
+            document.getElementById('ref-amount-thb').value = src.totalTHB;
+        }
+
+        function postToJournal(doc) {
+            const batch = db.batch(); const entries = []; const rate = doc.rate || 1; const depositTHB = (doc.depositDeduct || 0) * rate; let baseTHB = doc.totalTHB; let costBase = baseTHB; let vat = 0;
+            if(doc.useVat) { costBase = baseTHB * 100/107; vat = baseTHB - costBase; }
+            const grossPurchase = costBase + (depositTHB > 0 ? (depositTHB * 100/107) : 0); const cashAcc = doc.payMethod==='bank'?'1001':'1000';
+            const apAcc = doc.vendorAccType || '2000'; 
+
+            if(doc.type === 'EXP' || doc.type === 'BILL') { 
+                doc.items.forEach(item => { 
+                    let accCode = item.name.split(' ')[0]; 
+                    const accountExists = ACCOUNTS.find(a => a.code === accCode);
+                    if(!accountExists) { accCode = (doc.type === 'BILL') ? '5101' : '5399'; }
+                    const itemTotal = (item.qty * item.price) * rate; 
+                    let itemBase = itemTotal; 
+                    if(doc.useVat) itemBase = itemTotal * 100/107; 
+                    entries.push({acc: accCode, name: item.name, dr: itemBase, cr: 0}); 
+                }); 
+                if(vat > 0) entries.push({acc:'1150', name:'ภาษีซื้อ', dr: vat, cr: 0}); 
+                if(doc.type === 'EXP') { entries.push({acc: cashAcc, name:'เงินสด/ธนาคาร', dr: 0, cr: doc.totalTHB}); } 
+                else { 
+                    if(depositTHB > 0) { const depBase = doc.useVat ? (depositTHB * 100/107) : depositTHB; entries.push({acc: '1160', name: 'เงินมัดจำจ่ายล่วงหน้า', dr: 0, cr: depBase}); }
+                    entries.push({acc: apAcc, name:'เจ้าหนี้', dr: 0, cr: doc.totalTHB}); 
+                }
+            }
+            else if(doc.type === 'DEP') { entries.push({acc:'1160', name:'เงินมัดจำจ่ายล่วงหน้า', dr: costBase, cr: 0}); if(vat>0) entries.push({acc:'1150', name:'ภาษีซื้อ', dr: vat, cr: 0}); entries.push({acc: cashAcc, name:'เงินสด/ธนาคาร', dr: 0, cr: doc.totalTHB}); } 
+            else if(doc.type === 'PV') { 
+                const originalAP = doc.refAmountTHB || doc.totalTHB; const actualPay = doc.totalTHB; const diff = originalAP - actualPay; 
+                entries.push({acc: apAcc, name:'เจ้าหนี้', dr: originalAP, cr: 0}); entries.push({acc:cashAcc, name:'เงินสด/ธนาคาร', dr: 0, cr: actualPay});
+                if (diff > 0) { entries.push({acc: '8100', name:'กำไร(ขาดทุน)จากอัตราแลกเปลี่ยน', dr: 0, cr: diff}); } 
+                else if (diff < 0) { entries.push({acc: '8100', name:'กำไร(ขาดทุน)จากอัตราแลกเปลี่ยน', dr: Math.abs(diff), cr: 0}); }
+            }
+            entries.forEach((e,i) => { const journalId = `${doc.id}_${i}`; batch.set(db.collection('app_purchase_journal').doc(journalId), {...e, date: doc.date, ref: doc.no, docId: doc.id, oid: CUR_USER.uid, type: doc.type}); });
+            batch.commit().catch(err => alert("Journal Error: " + err.message));
+        }
+
+        function renderTrialBalance() {
+            const t = document.getElementById('tb-body'); t.innerHTML = '';
+            const start = document.getElementById('tb-start').value;
+            const end = document.getElementById('tb-end').value;
+            let filtered = JOURNAL;
+            if(start && end) { filtered = filtered.filter(j => j.date >= start && j.date <= end); }
+            const tb = {};
+            filtered.forEach(j=>{ 
+                if(!tb[j.acc]) tb[j.acc]={dr:0,cr:0,name:j.name || ''}; 
+                tb[j.acc].dr+=j.dr; tb[j.acc].cr+=j.cr; 
+                const accDef = ACCOUNTS.find(a=>a.code === j.acc);
+                if(accDef) tb[j.acc].name = accDef.name;
+            });
+            let sDr=0, sCr=0;
+            Object.keys(tb).sort().forEach(k=>{
+                sDr+=tb[k].dr; sCr+=tb[k].cr;
+                t.innerHTML+=`<tr class="border-b"><td class="p-2">${k}</td><td class="p-2">${tb[k].name}</td><td class="p-2 text-right">${tb[k].dr.toLocaleString()}</td><td class="p-2 text-right">${tb[k].cr.toLocaleString()}</td></tr>`;
+            });
+            document.getElementById('tb-sum-dr').innerText=sDr.toLocaleString();
+            document.getElementById('tb-sum-cr').innerText=sCr.toLocaleString();
+        }
+
+        function openDepositModal(){
+            const vid = document.getElementById('vendor-picker').value;
+            if(!vid) return alert("กรุณาเลือกผู้ขายก่อน");
+            document.getElementById('deposit-modal').classList.remove('hidden');
+            const tbody = document.getElementById('deposit-list-body'); tbody.innerHTML='';
+            const deps = DOCUMENTS.filter(d => d.type==='DEP' && d.vid==vid && d.status!=='USED'); 
+            if(deps.length===0) { tbody.innerHTML='<tr><td colspan="3" class="p-4 text-center">ไม่มีมัดจำคงเหลือ</td></tr>'; } 
+            else { deps.forEach(d=>{ let statusColor = d.status === 'PAID' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'; let statusText = d.status === 'PAID' ? 'พร้อมใช้ (PAID)' : 'ยังไม่จ่าย (UNPAID)'; tbody.innerHTML += `<tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="selectDeposit('${d.id}', ${d.total})"><td class="p-2">${d.no}</td><td class="p-2 text-right">${d.total.toLocaleString()} ${d.currency}</td><td class="p-2 text-center ${statusColor}">${statusText}</td></tr>`; }); }
+        }
+        function selectDeposit(id, amt){ const dep = DOCUMENTS.find(d => d.id == id); if (dep && dep.status === 'UNPAID') { if(!confirm('⚠️ เตือน: มัดจำใบนี้สถานะ "ยังไม่จ่าย" (UNPAID)\nตามหลักบัญชีควรจ่ายเงินมัดจำก่อนนำมาตัดยอด\n\nต้องการดำเนินการต่อหรือไม่?')) { return; } } document.getElementById('deposit-val').innerText = `- ${amt.toLocaleString()}`; document.getElementById('deposit-deduct').value = amt; document.getElementById('deposit-ref-id').value = id; document.getElementById('deposit-modal').classList.add('hidden'); calcTotal(); }
+        function resetDeposit(){ document.getElementById('deposit-val').innerText = `- 0.00`; document.getElementById('deposit-deduct').value = 0; document.getElementById('deposit-ref-id').value = ''; calcTotal(); }
+        function exportBackup() { const data = { documents: DOCUMENTS, vendors: VENDORS, products: PRODUCTS, settings: SETTINGS, accounts: ACCOUNTS, journal: JOURNAL }; const blob = new Blob([JSON.stringify(data)], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
+        function importRestore(input) { const file = input.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { const data = JSON.parse(e.target.result); if(confirm('ข้อมูลเดิมจะถูกทับ ยืนยัน?')) { const b = db.batch(); if(data.documents) data.documents.forEach(d => b.set(db.collection('app_purchase_docs').doc(d.id.toString()), d)); if(data.vendors) data.vendors.forEach(d => b.set(db.collection('app_purchase_vendors').doc(d.id || d.name), d)); if(data.settings) b.set(db.collection('app_purchase_settings').doc(CUR_USER.uid), data.settings); b.commit().then(() => { alert('กู้คืนสำเร็จ! กรุณารีเฟรชหน้าจอ'); location.reload(); }); } }; reader.readAsText(file); }
+        function factoryReset() { if(confirm('⚠️ คำเตือน: ข้อมูลทั้งหมดจะหายไป! ยืนยัน?')) { const batch = db.batch(); db.collection('app_purchase_docs').where('oid', '==', CUR_USER.uid).get().then(snap => { snap.forEach(doc => doc.ref.delete()); db.collection('app_purchase_journal').where('oid', '==', CUR_USER.uid).get().then(snap2 => { snap2.forEach(doc => doc.ref.delete()); db.collection('app_purchase_vendors').where('oid', '==', CUR_USER.uid).get().then(snap3 => { snap3.forEach(doc => doc.ref.delete()); alert('ระบบถูกล้างแล้ว (กรุณารีเฟรช)'); }); }); }); } }
+        
+        function renderUI(){ 
+            calculateDashboard(); 
+            const h = document.getElementById('history-table-body'); h.innerHTML=''; 
+            DOCUMENTS.forEach(d=>{ 
+                let stClass = d.status==='PAID'?'st-paid':(d.status==='PENDING'?'st-pending':(d.status==='PROCESSED'?'st-processed':'st-unpaid')); 
+                let actionBtn = ''; 
+                if(d.type === 'PO' && d.status !== 'PROCESSED') { actionBtn = `<button onclick="convertDoc(${d.id}, 'DEP')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 hover:bg-purple-200">มัดจำ</button> <button onclick="convertDoc(${d.id}, 'BILL')" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-200">เปิดบิล</button>`; } 
+                else if ((d.type === 'BILL' || d.type === 'DEP') && d.status === 'UNPAID') { actionBtn = `<button onclick="convertDoc(${d.id}, 'PV')" class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded border border-green-200 hover:bg-green-200 font-bold"><i class="fa-solid fa-money-bill-wave"></i> จ่ายเงิน</button>`; } 
+                else if (d.status === 'PAID' || d.type === 'PV' || d.type === 'EXP') { actionBtn = `<span class="text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i> ชำระแล้ว</span>`; } 
+                else if (d.status === 'PROCESSED') { actionBtn = `<span class="text-xs text-gray-400">ดำเนินการแล้ว</span>`; } 
                 
-                // 1. Scan for Header Row
-                let headerIdx = -1;
-                for(let i=0; i<Math.min(data.length,20); i++) {
-                    const str = JSON.stringify(data[i]);
-                    if(str.includes("วันที่") && (str.includes("ใบสำคัญ") || str.includes("Voucher"))) {
-                        headerIdx = i; break;
-                    }
-                }
-                
-                if(headerIdx === -1) { alert("❌ ไม่พบหัวตาราง (วันที่, ใบสำคัญ) ลองเปลี่ยนรหัสภาษา TIS-620/UTF-8"); return; }
-
-                // 2. Map Columns
-                const header = data[headerIdx];
-                let colDate = header.indexOf("วันที่");
-                let colRef = header.indexOf("ใบสำคัญ");
-                if(colRef === -1) colRef = header.findIndex(c => String(c).includes("Voucher"));
-                let colDesc = header.indexOf("คำอธิบาย");
-                let colDr = header.indexOf("เดบิต");
-                let colCr = header.indexOf("เครดิต");
-
-                // 3. Extract Data
-                let items = [];
-                for(let i=headerIdx+1; i<data.length; i++) {
-                    const row = data[i];
-                    if(!row[colDate]) continue;
-                    let dateStr = String(row[colDate]).trim();
-                    if(!dateStr.match(/\d/)) continue;
-
-                    let ref = String(row[colRef]||"").trim();
-                    let desc = String(row[colDesc]||"").trim();
-                    let dr = parseFloat(String(row[colDr]||"0").replace(/,/g,''));
-                    let cr = parseFloat(String(row[colCr]||"0").replace(/,/g,''));
-
-                    if(dr>0 || cr>0) {
-                        items.push({ date:dateStr, ref:ref, desc:desc, debit:dr||0, credit:cr||0, matchId:null });
-                    }
-                }
-
-                if(type === 'vat') {
-                    // For VAT GL: We only care about Debit (Tax Paid)
-                    // Note: Express GL for VAT might have Dr/Cr depending on adjustment
-                    appData.vatGL = items.map(i => ({...i, amount: i.debit > 0 ? i.debit : -i.credit})); 
-                    runVatRecon(); alert(`GL VAT Import: ${items.length} รายการ`);
-                } else {
-                    appData.bankGL = items;
-                    updateBankUI(); alert(`GL Bank Import: ${items.length} รายการ`);
-                }
-                saveData(); input.value='';
-            }; reader.readAsArrayBuffer(file);
+                h.innerHTML+=`
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3">${d.date}</td>
+                    <td class="p-3 font-bold text-blue-600">${d.no} <button onclick="loadDoc(${d.id})" class="ml-2 text-gray-400 hover:text-blue-600 no-print" title="ดู/แก้ไข"><i class="fa-solid fa-eye"></i></button></td>
+                    <td class="p-3 text-sm text-gray-500">${d.vendorInvNo || '-'}</td>
+                    <td class="p-3">${d.vendorInfo.split('\n')[0]}</td>
+                    <td class="p-3 text-right">${d.total.toLocaleString()} ${d.currency}</td>
+                    <td class="p-3 text-center"><span class="${stClass}">${d.status}</span></td>
+                    <td class="p-3 text-center space-x-1">${actionBtn}</td>
+                    <td class="p-3 text-center"><button onclick="deleteDocument(${d.id})" class="text-gray-300 hover:text-red-500 no-print"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`; 
+            }); 
+            renderApReport(); renderVatReport(); 
         }
 
-        // --- VAT RECON ---
-        function runVatRecon() {
-            const tb=document.getElementById('recon-vat-body'); tb.innerHTML='';
-            let mV=new Map(), mG=new Map(), sV=0, sG=0;
-            appData.audit.forEach(v=>{ 
-                // Group by Ref (or Inv)
-                let key = (v.ref && v.ref.length>3) ? v.ref : v.inv; 
-                key = key.toUpperCase().replace(/\s/g,'');
-                if(!mV.has(key)) mV.set(key,{amt:0,desc:v.vendor}); mV.get(key).amt+=v.tax; sV+=v.tax;
-            });
-            appData.vatGL.forEach(g=>{
-                if(g.amount <= 0) return; // Only verify Debits
-                let key=g.ref.toUpperCase().replace(/\s/g,'');
-                if(!mG.has(key)) mG.set(key,{amt:0,desc:g.desc}); mG.get(key).amt+=g.amount; sG+=g.amount;
-            });
-            let keys=new Set([...mV.keys(), ...mG.keys()]);
-            let rows=[];
-            keys.forEach(k=>{
-                let v=mV.get(k)||{amt:0,desc:''}, g=mG.get(k)||{amt:0,desc:''};
-                let diff=v.amt-g.amt;
-                let status=Math.abs(diff)<0.05?'ตรงกัน':(g.amt==0?'ไม่มีใน GL':(v.amt==0?'ไม่มีใน ภพ.30':'ยอดไม่เท่า'));
-                let css=Math.abs(diff)<0.05?'match-ok':(g.amt==0?'match-err':'match-warn');
-                rows.push({ k, desc:v.desc||g.desc, vAmt:v.amt, gAmt:g.amt, diff, status, css });
-            });
-            rows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
-            appData.vatReconResult=rows;
-            rows.forEach(r=>{
-                tb.innerHTML+=`<tr class="border-b ${r.css}"><td class="p-2 text-xs">${r.status}</td><td class="p-2 font-bold text-xs">${r.k}</td><td class="p-2 text-xs truncate max-w-[150px]">${r.desc}</td><td class="p-2 text-right">${fmt(r.vAmt)}</td><td class="p-2 text-right">${fmt(r.gAmt)}</td><td class="p-2 text-right font-bold">${fmt(r.diff)}</td></tr>`;
-            });
-            document.getElementById('rec-vat-sum-report').innerText=fmt(sV); document.getElementById('rec-vat-sum-gl').innerText=fmt(sG); document.getElementById('rec-vat-sum-diff').innerText=fmt(sV-sG);
+        function renderApReport() { const apBody = document.getElementById('ap-report-body'); apBody.innerHTML=''; const ap = {}; DOCUMENTS.filter(d=>(d.type==='BILL'||d.type==='DEP')&&d.status==='UNPAID').forEach(d=>{ const n = d.vendorInfo.split('\n')[0]; if(!ap[n]) ap[n]={thb:0, orig:0, curr:d.currency}; ap[n].thb+=d.totalTHB; ap[n].orig+=d.total; }); for(const [n,v] of Object.entries(ap)) apBody.innerHTML+=`<tr class="border-b"><td class="p-3">${n}</td><td class="p-3 text-right">${v.orig.toLocaleString()} ${v.curr}</td><td class="p-3 text-right font-bold">${v.thb.toLocaleString()}</td></tr>`; }
+        function renderVatReport() { const tbody = document.getElementById('vat-report-body'); tbody.innerHTML = ''; let sBase = 0, sVat = 0, sTotal = 0; const vatDocs = DOCUMENTS.filter(d => d.useVat && d.type !== 'PO' && d.type !== 'DN'); vatDocs.sort((a,b) => a.date.localeCompare(b.date)); vatDocs.forEach(d => { const total = d.totalTHB; const base = total / 1.07; const vat = total - base; sBase += base; sVat += vat; sTotal += total; tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-2">${d.date}</td><td class="p-2">${d.no}</td><td class="p-2 text-blue-600 font-bold">${d.vendorInvNo || '-'}</td><td class="p-2">${d.vendorInfo.split('\n')[0]}</td><td class="p-2 text-right">${base.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td class="p-2 text-right">${vat.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td class="p-2 text-right">${total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td></tr>`; }); document.getElementById('sum-vat-base').innerText = sBase.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); document.getElementById('sum-vat-amt').innerText = sVat.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); document.getElementById('sum-vat-total').innerText = sTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+        function autoFillPrice(e){ }
+        function updateVendorPicker(){ const s=document.getElementById('vendor-picker'); s.innerHTML='<option value="">-- เลือกผู้ขาย --</option>'; VENDORS.forEach(v=>s.innerHTML+=`<option value="${v.id}">${v.name}</option>`); }
+        function pickVendor(id){ const v = VENDORS.find(x=>x.id==id); if(v){ document.getElementById('vendor-info').value = `${v.name}\n${v.addr}`; document.getElementById('vendor-currency').value = v.currency; document.getElementById('vendor-acc-type').value = v.accType || '2000'; const isForeign = v.zone === 'foreign' || v.currency !== 'THB'; document.getElementById('fx-box').classList.toggle('hidden', !isForeign); document.getElementById('thb-convert-box').classList.toggle('hidden', !isForeign); document.getElementById('display-currency').innerText = v.currency; if(!isForeign) document.getElementById('exchange-rate').value = 1; ['th-curr1','th-curr2','sum-curr','grand-curr'].forEach(id=>document.getElementById(id).innerText = `(${v.currency})`); calcTotal(); } }
+        function renderJournal(){ const t=document.getElementById('journal-body'); t.innerHTML=''; const start = document.getElementById('journal-start').value; const end = document.getElementById('journal-end').value; const typeFilter = document.getElementById('journal-filter-type').value; let filtered = JOURNAL.sort((a,b)=>a.date.localeCompare(b.date)); if(start && end) { filtered = filtered.filter(j => j.date >= start && j.date <= end); } if (typeFilter !== 'ALL') { if (typeFilter === 'PV') filtered = filtered.filter(j => j.type === 'PV'); else if (typeFilter === 'BILL') filtered = filtered.filter(j => j.type === 'BILL'); } filtered.forEach(j=>{ t.innerHTML+=`<tr class="border-b"><td class="p-2">${j.date}</td><td class="p-2">${j.ref}</td><td class="p-2">${j.acc}</td><td class="p-2">${j.name}</td><td class="p-2 text-right">${j.dr>0?j.dr.toLocaleString():'-'}</td><td class="p-2 text-right">${j.cr>0?j.cr.toLocaleString():'-'}</td></tr>`; }); }
+        function renderGL() { const acc = document.getElementById('gl-account-selector').value; const t = document.getElementById('gl-body'); t.innerHTML=''; if(!acc) return; const entries = JOURNAL.filter(j=>j.acc===acc).sort((a,b)=>a.date.localeCompare(b.date)); let bal = 0; const type = ACCOUNTS.find(a=>a.code===acc)?.type; const isDr = (type==='Asset' || type==='Expense'); entries.forEach(j=>{ bal += isDr ? (j.dr-j.cr) : (j.cr-j.dr); t.innerHTML+=`<tr class="border-b"><td class="p-2">${j.date}</td><td class="p-2">${j.ref}</td><td class="p-2 text-right">${j.dr>0?j.dr.toLocaleString():'-'}</td><td class="p-2 text-right">${j.cr>0?j.cr.toLocaleString():'-'}</td><td class="p-2 text-right font-bold">${bal.toLocaleString()}</td></tr>`; }); }
+        
+        function loadDoc(id){ 
+            const d=DOCUMENTS.find(x=>x.id===id); 
+            if(d){ 
+                CUR_DOC_ID=d.id; setDocType(d.type); 
+                document.getElementById('doc-no').value=d.no; 
+                document.getElementById('vendor-info').value=d.vendorInfo; 
+                document.getElementById('doc-date').value = d.date; 
+                document.getElementById('doc-ref-display').value = d.refNo || ""; 
+                document.getElementById('vendor-inv-no').value = d.vendorInvNo || ""; 
+                document.getElementById('vendor-picker').value = d.vid; pickVendor(d.vid); 
+                document.getElementById('vendor-info').value = d.vendorInfo; 
+                document.getElementById('exchange-rate').value = d.rate || 1; 
+                document.getElementById('use-vat').checked = d.useVat; 
+                document.getElementById('item-list').innerHTML=''; 
+                d.items.forEach(i=>addItem(i.name,i.qty,i.price)); 
+                showPage('create'); calcTotal(); 
+            } 
         }
-        function exportReconVatExcel() { const d=appData.vatReconResult.map(r=>({"สถานะ":r.status,"Ref":r.k,"รายละเอียด":r.desc,"ภพ.30":r.vAmt,"GL":r.gAmt,"ผลต่าง":r.diff})); const ws=XLSX.utils.json_to_sheet(d); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"VatRecon"); XLSX.writeFile(wb,"VAT_Reconcile.xlsx"); }
-
-        // --- BANK RECON ---
-        function importBankStmt(input) {
-            const file=input.files[0]; if(!file)return;
-            const reader=new FileReader();
-            reader.onload=e=>{
-                const wb=XLSX.read(e.target.result,{type:'binary'});
-                const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
-                let items=[], wIdx=-1, dIdx=-1, dateIdx=-1;
-                // Smart Column Search
-                for(let i=0; i<Math.min(data.length,20); i++) {
-                    const row=data[i];
-                    row.forEach((c,idx)=>{ const s=String(c).toLowerCase(); if(s.includes('ถอน')||s.includes('withdraw')) wIdx=idx; if(s.includes('ฝาก')||s.includes('deposit')) dIdx=idx; if(s.includes('วัน')||s.includes('date')) dateIdx=idx; });
-                    if(wIdx!==-1 && dIdx!==-1) break;
-                }
-                if(wIdx!==-1){
-                    data.forEach(row=>{
-                        let dStr=row[dateIdx];
-                        if(dStr && String(dStr).match(/\d/)) {
-                            let w=parseFloat(String(row[wIdx]||"0").replace(/,/g,'')), d=parseFloat(String(row[dIdx]||"0").replace(/,/g,''));
-                            if(w>0||d>0) items.push({ date:dStr, desc:"Stmt", debit:w||0, credit:d||0, matchId:null });
-                        }
-                    });
-                    appData.bankStmt=items; saveData(); updateBankUI(); alert(`Stmt: ${items.length}`);
-                } else alert('ไม่พบหัวตาราง ถอน/ฝาก');
-                input.value='';
-            }; reader.readAsBinaryString(file);
-        }
-        function runBankRecon() {
-            appData.bankGL.forEach(i=>i.matchId=null); appData.bankStmt.forEach(i=>i.matchId=null);
-            // GL Debit (In) matches Stmt Credit (In)
-            appData.bankGL.filter(g=>g.debit>0).forEach(gl=>{ let m=appData.bankStmt.find(s=>s.credit===gl.debit && s.matchId===null); if(m){gl.matchId="M";m.matchId="M";} });
-            // GL Credit (Out) matches Stmt Debit (Out)
-            appData.bankGL.filter(g=>g.credit>0).forEach(gl=>{ let m=appData.bankStmt.find(s=>s.debit===gl.credit && s.matchId===null); if(m){gl.matchId="M";m.matchId="M";} });
-            appData.bankUnmatchGL=appData.bankGL.filter(i=>i.matchId===null); appData.bankUnmatchStmt=appData.bankStmt.filter(i=>i.matchId===null);
-            saveData(); updateBankUI(); alert('Reconcile Done');
-        }
-        function updateBankUI() {
-            document.getElementById('bank-gl-status').innerText=`GL: ${appData.bankGL.length}`; document.getElementById('bank-stmt-status').innerText=`Stmt: ${appData.bankStmt.length}`;
-            const tg=document.getElementById('table-bank-gl-unmatch'); tg.innerHTML=''; appData.bankUnmatchGL.forEach(i=>tg.innerHTML+=`<tr class="border-b"><td class="p-1 text-xs">${i.date}</td><td class="p-1 text-xs">${i.ref}</td><td class="p-1 text-right text-green-600">${fmt(i.debit)}</td><td class="p-1 text-right text-red-700">${fmt(i.credit)}</td></tr>`);
-            const ts=document.getElementById('table-bank-stmt-unmatch'); ts.innerHTML=''; appData.bankUnmatchStmt.forEach(i=>ts.innerHTML+=`<tr class="border-b"><td class="p-1 text-xs">${i.date}</td><td class="p-1 text-xs">${i.desc}</td><td class="p-1 text-right text-red-600">${fmt(i.debit)}</td><td class="p-1 text-right text-green-600">${fmt(i.credit)}</td></tr>`);
-        }
-        function exportBankRecon() {
-            const wb=XLSX.utils.book_new();
-            const d1=appData.bankUnmatchGL.map(i=>({"Date":i.date,"Ref":i.ref,"Deposit(Dr)":i.debit,"Withdraw(Cr)":i.credit,"Note":"Not in Bank"}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d1), "GL_Diff");
-            const d2=appData.bankUnmatchStmt.map(i=>({"Date":i.date,"Desc":i.desc,"Withdraw(Dr)":i.debit,"Deposit(Cr)":i.credit,"Note":"Not in GL"}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d2), "Bank_Diff");
-            XLSX.writeFile(wb,"Bank_Recon_Diff.xlsx");
-        }
-
-        function fmt(n) { return n?n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'-'; }
+        function resetForm(){ document.getElementById('item-list').innerHTML=''; addItem(); document.getElementById('vendor-info').value=''; setDocType('PO'); pickVendor(''); document.getElementById('ref-doc-id').value=''; }
+        function showPage(p){document.querySelectorAll('.main-content > div').forEach(d=>d.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');}
+        function handleLogin(e){e.preventDefault();auth.signInWithEmailAndPassword(document.getElementById('auth-email').value,document.getElementById('auth-pass').value);}
+        function handleRegister(){auth.createUserWithEmailAndPassword(document.getElementById('auth-email').value,document.getElementById('auth-pass').value);}
+        function importStockCSV(input){ const file = input.files[0]; if(!file) return; Papa.parse(file, { complete: function(results) { const batch = db.batch(); let count = 0; results.data.forEach((row, index) => { if (index === 0) return; if(row[0] && row[0].trim() !== ""){ const ref = db.collection('app_purchase_products').doc(); let qty = 0; if (row[3]) qty = parseFloat(row[3].replace(/,/g, '')); else if (row[1]) qty = parseFloat(row[1].replace(/,/g, '')); if (isNaN(qty)) qty = 0; batch.set(ref, {name: row[0].trim(), qty: qty, oid: CUR_USER.uid}); count++; } }); batch.commit().then(()=>{ alert(`นำเข้าสำเร็จ ${count} รายการ`); location.reload(); }); } }); }
+        function renderStock(){ const tbody = document.getElementById('stock-list-body'); tbody.innerHTML=''; const stock = {}; PRODUCTS.forEach(p => stock[p.name] = {bf: p.qty, in:0, out:0}); DOCUMENTS.forEach(d=>{ if(d.type==='BILL'){ d.items.forEach(i=>{ if(!stock[i.name]) stock[i.name] = {bf:0, in:0, out:0}; stock[i.name].in += i.qty; }); } }); for(const [name, s] of Object.entries(stock)){ tbody.innerHTML += `<tr class="border-b"><td class="p-3">${name}</td><td class="p-3 text-right text-gray-500">${s.bf}</td><td class="p-3 text-right text-green-600">${s.in}</td><td class="p-3 text-right text-red-500">${s.out}</td><td class="p-3 text-right font-bold text-blue-600">${s.bf+s.in-s.out}</td></tr>`; } }
+        function updateProductDatalist(){ const dl=document.getElementById('product-list'); dl.innerHTML=''; PRODUCTS.forEach(p=>dl.innerHTML+=`<option value="${p.name}">`); }
+        function updateAccountDatalist(){ const dl=document.getElementById('account-list'); dl.innerHTML=''; ACCOUNTS.filter(a=>a.type==='Expense').forEach(p=>dl.innerHTML+=`<option value="${p.code} ${p.name}">`); }
+        function clearStock(){ db.collection('app_purchase_products').where('oid','==',CUR_USER.uid).get().then(s=>{ const batch = db.batch(); s.forEach(d=>batch.delete(d.ref)); batch.commit().then(()=>alert('ล้างสต็อกแล้ว')); }); }
+        function exportTableToExcel(tableID, filename = ''){ var wb = XLSX.utils.table_to_book(document.getElementById(tableID)); XLSX.writeFile(wb, filename?filename+'.xlsx':'report.xlsx'); }
+        function autoGrow(e){e.style.height='5px';e.style.height=(e.scrollHeight)+'px';}
     </script>
 </body>
 </html>
