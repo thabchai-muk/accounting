@@ -16,11 +16,8 @@
         body {
             font-family: 'Sarabun', sans-serif;
             background-color: var(--bg);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; min-height: 100vh;
             color: #333;
         }
 
@@ -68,6 +65,14 @@
         .header { text-align: center; margin-bottom: 40px; position: relative; width: 100%; max-width: 1000px; }
         .header h1 { color: var(--primary); margin-bottom: 5px; font-size: 2rem; }
         .header p { color: #7f8c8d; margin: 0; }
+
+        /* เพิ่ม Badge (ป้ายบอกตำแหน่ง) */
+        .role-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.8rem; margin-top: 10px; font-weight: bold;
+        }
+        .badge-admin { background-color: #e74c3c; color: white; } /* แดง */
+        .badge-customer { background-color: #27ae60; color: white; } /* เขียว */
         
         .user-info {
             position: absolute; top: 0; right: 0;
@@ -143,7 +148,7 @@
             <input type="email" id="email" class="login-input" placeholder="อีเมล (เช่น admin@maudit.com)">
             <input type="password" id="password" class="login-input" placeholder="รหัสผ่าน" onkeypress="if(event.key==='Enter') doLogin()">
             
-            <button class="login-btn" onclick="doLogin()">เข้าสู่ระบบ (Firebase)</button>
+            <button class="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
             <div id="loader" class="loading-spinner"></div>
             <div id="login-msg" class="login-err"></div>
         </div>
@@ -151,8 +156,10 @@
 
     <div id="app-container">
         <div class="header">
-            <h1>M-Audit System</h1>
-            <p>ศูนย์รวมเครื่องมือผู้ช่วยสอบบัญชี และตรวจสอบรายการ</p>
+            <h1 id="welcome-text">M-Audit System</h1>
+            <p id="company-text">กำลังโหลดข้อมูล...</p>
+            <span id="role-badge" class="role-badge" style="display:none;"></span>
+
             <div class="user-info">
                 <span id="display-email" class="user-email">...</span>
                 <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> ออก</button>
@@ -184,7 +191,7 @@
                 <span class="desc">ทะเบียนเงินรับฝาก / มัดจำ</span>
             </a>
 
-            <a href="./tax-other/index.html" class="menu-card">
+            <a href="./tax-other/index.html" class="menu-card" id="menu-tax">
                 <span class="icon">📑</span>
                 <span class="title">5. Tax & Other</span>
                 <span class="desc">ภาษี, ประกันสังคม, ทรัพย์สิน</span>
@@ -198,6 +205,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+        
+        // ** สำคัญ ** เพิ่มบรรทัดนี้เพื่อเรียกใช้ Database
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAMwa2H7l6rYiEmGPAPq2zMDEZilrzuwyE",
@@ -213,29 +223,86 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const analytics = getAnalytics(app);
+        
+        // ** สำคัญ ** เริ่มต้นระบบ Database
+        const db = getFirestore(app);
 
         // --- Auth Functions --- //
         
-        // 1. ตรวจสอบสถานะการล็อกอิน (ทำงานตลอดเวลา)
-        onAuthStateChanged(auth, (user) => {
+        // 1. ตรวจสอบสถานะการล็อกอิน และ ดึงข้อมูล Role
+        onAuthStateChanged(auth, async (user) => {
             const loginScreen = document.getElementById('login-screen');
             const appContainer = document.getElementById('app-container');
+            
             const displayEmail = document.getElementById('display-email');
+            const welcomeText = document.getElementById('welcome-text');
+            const companyText = document.getElementById('company-text');
+            const roleBadge = document.getElementById('role-badge');
+            const menuTax = document.getElementById('menu-tax'); // ปุ่มเมนูที่ 5
 
             if (user) {
-                // User is signed in
+                // >> ถ้า User ล็อกอินอยู่
                 console.log("User Active:", user.email);
+                displayEmail.innerText = user.email;
+
+                try {
+                    // วิ่งไปค้นข้อมูลใน Database ว่า User ID นี้คือใคร?
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        
+                        // 1. เปลี่ยนข้อความเป็นชื่อบริษัท (ถ้ามี)
+                        if(userData.company) {
+                            companyText.innerText = "บริษัท: " + userData.company;
+                        } else {
+                            companyText.innerText = "ระบบจัดการ M-Audit";
+                        }
+
+                        // 2. ตรวจสอบ Role เพื่อปรับหน้าจอ
+                        if (userData.role === 'admin') {
+                            // --- กรณีเป็น Admin ---
+                            welcomeText.innerText = "Admin Dashboard";
+                            roleBadge.innerText = "ผู้ดูแลระบบ";
+                            roleBadge.className = "role-badge badge-admin";
+                            roleBadge.style.display = "inline-block";
+                            
+                            // Admin ต้องเห็นปุ่ม Tax
+                            if(menuTax) menuTax.style.display = "flex";
+
+                        } else if (userData.role === 'customer') {
+                            // --- กรณีเป็น ลูกค้า ---
+                            welcomeText.innerText = "ยินดีต้อนรับ";
+                            roleBadge.innerText = "ลูกค้า";
+                            roleBadge.className = "role-badge badge-customer";
+                            roleBadge.style.display = "inline-block";
+
+                            // ลูกค้า ห้ามเห็นปุ่ม Tax (ซ่อนมันซะ)
+                            if(menuTax) menuTax.style.display = "none";
+                        }
+
+                    } else {
+                        // กรณีล็อกอินได้ แต่เราลืมใส่ข้อมูลใน Database
+                        companyText.innerText = "ไม่พบสิทธิ์การใช้งาน (No Data)";
+                    }
+
+                } catch (error) {
+                    console.error("Error reading DB:", error);
+                }
+
+                // สลับหน้าจอ เปิด Dashboard
                 loginScreen.style.display = 'none';
                 appContainer.style.display = 'flex';
-                displayEmail.innerText = user.email; // โชว์อีเมลคนที่ล็อกอินอยู่
+
             } else {
-                // User is signed out
+                // >> ถ้ายังไม่ล็อกอิน
                 loginScreen.style.display = 'flex';
                 appContainer.style.display = 'none';
             }
         });
 
-        // 2. ฟังก์ชันล็อกอิน
+        // 2. ฟังก์ชันล็อกอิน (เหมือนเดิม)
         window.doLogin = function() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -248,13 +315,12 @@
                 return;
             }
 
-            // UI Loading
             msg.style.display = 'none';
             loader.style.display = 'block';
 
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Success (onAuthStateChanged จะทำงานต่อเอง)
+                    // ผ่านฉลุย (เดี๋ยว onAuthStateChanged จะทำงานต่อเอง)
                     loader.style.display = 'none';
                 })
                 .catch((error) => {
@@ -262,20 +328,20 @@
                     msg.style.display = 'block';
                     console.error(error.code);
                     
-                    // แปล Error เป็นภาษาไทย
                     if (error.code === 'auth/invalid-email') msg.innerText = "รูปแบบอีเมลไม่ถูกต้อง";
                     else if (error.code === 'auth/user-not-found') msg.innerText = "ไม่พบผู้ใช้งานนี้";
                     else if (error.code === 'auth/wrong-password') msg.innerText = "รหัสผ่านไม่ถูกต้อง";
                     else if (error.code === 'auth/too-many-requests') msg.innerText = "ลองบ่อยเกินไป กรุณารอสักครู่";
-                    else msg.innerText = "เข้าสู่ระบบไม่สำเร็จ: " + error.code;
+                    else msg.innerText = "เข้าสู่ระบบไม่สำเร็จ";
                 });
         }
 
-        // 3. ฟังก์ชันออกจากระบบ
+        // 3. ฟังก์ชันออกจากระบบ (เหมือนเดิม)
         window.doLogout = function() {
             signOut(auth).then(() => {
-                // Sign-out successful.
                 console.log("Signed out");
+                // รีเซ็ตค่าหน้าจอนิดหน่อย
+                document.getElementById('company-text').innerText = "กำลังโหลด...";
             }).catch((error) => {
                 console.error(error);
             });
