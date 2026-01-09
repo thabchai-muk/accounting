@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AP Audit Pro : V.16.1 Perfect</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root { --primary: #4338ca; --bg: #eef2ff; --text: #1e1b4b; --danger: #ef4444; --success: #10b981; --gain: #059669; --loss: #dc2626; }
+        body { font-family: 'Sarabun', sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* LOGIN SCREEN */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #4338ca 0%, #312e81 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 350px; text-align: center; }
+        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Sarabun'; font-size: 1rem; box-sizing: border-box; }
+        .login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; transition:0.3s; }
+        .login-btn:hover { background: #312e81; }
+        .login-err { color: var(--danger); margin-top: 10px; display: none; }
+
+        /* APP LAYOUT */
+        #app-container { display: none; flex: 1; padding: 20px; flex-direction: column; height: 100%; box-sizing: border-box; }
+        .container { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+        .header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 1.3rem; }
+        
+        .toolbar { padding: 10px 20px; background: #e0e7ff; border-bottom: 1px solid #c7d2fe; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-family: 'Sarabun'; display: inline-flex; align-items: center; gap: 5px; font-weight: bold; font-size: 0.9rem; white-space: nowrap; transition: 0.2s; color: white; text-decoration: none; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-blue { background: #2563eb; } .btn-orange { background: #d97706; } .btn-green { background: #059669; } .btn-red { background: #be123c; } .btn-purple { background: #7c3aed; } .btn-gray { background: #64748b; }
+        .btn-fx { background: #db2777; box-shadow: 0 2px 5px rgba(219, 39, 119, 0.3); } 
+
+        .main-content { display: grid; grid-template-columns: 350px 1fr; flex: 1; overflow: hidden; }
+        
+        /* SIDEBAR */
+        .sidebar { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-summary { background: #e0e7ff; padding: 15px; border-bottom: 1px solid #c7d2fe; }
+        .sum-card { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; }
+        .sum-title { font-size: 0.8rem; color: #64748b; font-weight: bold; }
+        .sum-val { font-size: 1.1rem; color: #4338ca; font-weight: bold; font-family: 'Courier New', monospace; }
+
+        .sup-list-container { flex: 1; overflow-y: auto; }
+        .sup-item { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: 0.1s; }
+        .sup-item:hover { background: #eff6ff; }
+        .sup-item.active { background: #e0e7ff; border-left: 4px solid var(--primary); }
+        .sup-name { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sup-bal { font-size: 0.85rem; display: flex; justify-content: space-between; color: #64748b; margin-top: 4px; }
+        
+        /* DETAIL VIEW */
+        .detail-view { display: flex; flex-direction: column; overflow: hidden; background: white; }
+        .detail-header { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        .tabs { display: flex; padding: 0 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; border-radius: 8px 8px 0 0; font-weight: bold; color: #64748b; margin-bottom: -1px; }
+        .tab-btn.active { background: white; border-color: #e2e8f0; border-bottom-color: white; color: var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 0; display: none; }
+        .tab-content.active { display: block; }
+
+        /* TABLES */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: #f1f5f9; padding: 10px; text-align: left; color: #475569; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .num { text-align: right; font-family: 'Courier New', monospace; font-weight: bold; }
+        .col-dr { color: var(--success); } .col-cr { color: var(--danger); }
+        .fx-inp { width: 80px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; text-align: right; font-family: 'Sarabun'; }
+        .cur-inp { width: 50px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; text-align: center; font-family: 'Sarabun'; text-transform: uppercase; }
+        .chk-row { transform: scale(1.2); cursor: pointer; accent-color: var(--primary); }
+        .btn-del-row { background: #fee2e2; color: #be123c; padding: 2px 8px; border-radius: 4px; cursor: pointer; border:1px solid #fecaca; font-size:0.8em; margin-left: 5px; }
+
+        /* FX HIGHLIGHTS */
+        .gain-text { color: var(--gain); font-weight: bold; }
+        .loss-text { color: var(--loss); font-weight: bold; }
+        .fx-rate-container { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .rate-box { background:white; border:1px solid #c7d2fe; padding:5px 10px; border-radius:6px; display:flex; align-items:center; gap:5px; }
+        .rate-label { font-weight:bold; color:#4338ca; }
+
+        /* MODALS */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .modal-content { background: white; margin: 3% auto; padding: 25px; width: 850px; border-radius: 10px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 15px; } .form-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-family: 'Sarabun'; }
+        .comp-inp { width: 120px; padding: 4px; border: 1px solid #ccc; text-align: right; border-radius: 4px; font-family: 'Sarabun'; }
+        .diff-ok { color: var(--success); background: #ecfdf5; padding: 2px 8px; border-radius: 4px; font-weight:bold; font-size: 0.85em; }
+        .diff-err { color: var(--danger); background: #fef2f2; padding: 2px 8px; border-radius: 4px; font-weight:bold; font-size: 0.85em; }
+
+        .empty-state { text-align: center; color: #cbd5e1; margin-top: 100px; }
+        @media print { .no-print, .sidebar, #login-screen { display: none !important; } #app-container { display: flex !important; padding: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <h2 style="color:var(--primary); margin-bottom:20px;"><i class="fas fa-shield-alt"></i> Audit Login</h2>
+        <input type="text" id="username" class="login-input" placeholder="User: admin">
+        <input type="password" id="password" class="login-input" placeholder="Pass: 1234" onkeypress="if(event.key==='Enter') checkLogin()">
+        <button class="login-btn" onclick="checkLogin()">เข้าสู่ระบบ</button>
+        <div id="login-msg" class="login-err" style="display:none; color:red; margin-top:10px;">รหัสผ่านไม่ถูกต้อง</div>
+    </div>
+</div>
+
+<div id="app-container">
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-coins"></i> AP Audit Pro <small style="font-size:0.5em; opacity:0.8; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">V.16.1 Perfect</small></h1>
+            <div class="no-print">
+                <span id="save-status" style="opacity:0; transition:0.3s; font-size:0.9rem; color:#fff; margin-right:10px;"><i class="fas fa-check"></i> บันทึกแล้ว</span>
+                <button class="btn btn-red btn-sm" onclick="logout()">ออก</button>
+            </div>
+        </div>
+
+        <div class="toolbar no-print">
+            <input type="file" id="f-imp" hidden onchange="handleFile(this)">
+            <button class="btn btn-blue" onclick="document.getElementById('f-imp').click()"><i class="fas fa-file-import"></i> Import GL</button>
+            <button class="btn btn-orange" onclick="addBF()"><i class="fas fa-plus-circle"></i> เพิ่ม B/F</button>
+            <div style="width:1px; height:30px; background:#c7d2fe; margin:0 10px;"></div>
+            <button class="btn btn-purple" onclick="openCompModal()"><i class="fas fa-search-dollar"></i> 🔍 เทียบยอด GL</button>
+            <button class="btn btn-fx" onclick="openFXModal()"><i class="fas fa-chart-line"></i> 💰 คำนวณ FX</button>
+            <div style="flex:1;"></div>
+            <button class="btn btn-green" onclick="exportReport()"><i class="fas fa-file-excel"></i> Export</button>
+            <button class="btn btn-gray" onclick="backupData()"><i class="fas fa-download"></i> Backup</button>
+            <input type="file" id="f-restore" hidden onchange="restoreData(this)">
+            <button class="btn btn-gray" onclick="document.getElementById('f-restore').click()"><i class="fas fa-upload"></i> Restore</button>
+            <button class="btn btn-red" onclick="clearData()"><i class="fas fa-trash-alt"></i> ล้างข้อมูล</button>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-summary">
+                    <div class="sum-card">
+                        <div class="sum-title">ยอดหนี้ทั้งสิ้น (Total AP)</div>
+                        <div class="sum-val" id="sum-total-ap">0.00</div>
+                    </div>
+                </div>
+                <div class="sup-list-container" id="sup-list"></div>
+            </div>
+            
+            <div class="detail-view" id="detail-view">
+                <div class="empty-state"><i class="fas fa-file-invoice" style="font-size:4rem; opacity:0.5;"></i><p>เลือกเจ้าหนี้ทางซ้ายเพื่อตรวจสอบรายการ</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="bfModal" class="modal">
+    <div class="modal-content" style="width:400px; height:auto;">
+        <h3 style="margin-top:0; color:var(--primary);">เพิ่มเจ้าหนี้ยกมา (AP B/F)</h3>
+        <input type="hidden" id="bf-sup-key">
+        <div class="form-group"><label>วันที่</label><input type="date" id="bf-date" class="form-input" value="2025-01-01"></div>
+        <div class="form-group"><label>เลขที่เอกสาร (Item)</label><input type="text" id="bf-item" class="form-input" value="B/F"></div>
+        <div class="form-group"><label>รายละเอียด</label><input type="text" id="bf-desc" class="form-input" value="ยอดยกมา (B/F)"></div>
+        <div class="form-group"><label>ยอดหนี้คงเหลือ (Cr - บาท)</label><input type="number" id="bf-amt" class="form-input" placeholder="0.00"></div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;"><label>เงินตราตปท.</label><input type="number" id="bf-fx-amt" class="form-input" placeholder="0.00"></div>
+            <div class="form-group" style="width:80px;"><label>สกุล</label><input type="text" id="bf-fx-curr" class="form-input" placeholder="USD"></div>
+        </div>
+        <div style="text-align:right; margin-top:10px;">
+            <button class="btn btn-gray" onclick="closeModal('bfModal')">ยกเลิก</button>
+            <button class="btn btn-green" onclick="saveBF()">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<div id="compModal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h3 style="color:var(--primary); margin:0;">🔍 กระทบยอดบัญชี (GL Reconcile)</h3>
+            <button class="btn btn-red btn-sm" onclick="closeModal('compModal')">ปิด</button>
+        </div>
+        <div style="background:#f0fdfa; padding:15px; margin:10px 0; border-radius:8px; border:1px solid #ccfbf1; display:flex; align-items:center; gap:15px;">
+            <div><strong><i class="fas fa-magic"></i> Auto Import Report:</strong><br><span style="font-size:0.85rem; color:#0f766e;">นำเข้าไฟล์รายงานเจ้าหนี้คงค้าง เพื่อดึงยอดมาเทียบ</span></div>
+            <input type="file" id="f-rep-imp" hidden onchange="handleReportFile(this)"><button class="btn btn-orange" onclick="document.getElementById('f-rep-imp').click()"><i class="fas fa-file-upload"></i> Import Report</button>
+        </div>
+        <div style="flex:1; overflow:auto;">
+            <table width="100%"><thead><tr style="background:#e0e7ff;"><th>ชื่อเจ้าหนี้ (Clean Name)</th><th class="num">ยอดในโปรแกรม</th><th class="num" style="background:#ffedd5;">ยอดตามบัญชี (Report)</th><th class="num">ผลต่าง</th></tr></thead><tbody id="comp-body"></tbody></table>
+        </div>
+        <div style="text-align:right; margin-top:10px;"><b>Total Diff: <span id="total-diff-val">0.00</span></b> <button class="btn btn-green" onclick="exportComp()">Export</button></div>
+    </div>
+</div>
+
+<div id="fxModal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h3 style="color:#db2777; margin:0;">💰 ปรับปรุงอัตราแลกเปลี่ยน (FX)</h3>
+            <button class="btn btn-gray btn-sm" onclick="closeModal('fxModal')">ปิด</button>
+        </div>
+        <div style="background:#fdf2f8; padding:15px; margin:10px 0; border-radius:8px;">
+            <strong>ระบุ Rate สิ้นปี:</strong>
+            <div id="fx-rate-inputs" class="fx-rate-container" style="margin-top:5px;"></div>
+        </div>
+        <div style="flex:1; overflow:auto;">
+            <table width="100%"><thead><tr style="background:#fce7f3;"><th>เจ้าหนี้</th><th>สกุล</th><th class="num">เงินตราต่างประเทศ</th><th class="num">Book Value</th><th class="num">Fair Value</th><th class="num">Gain/(Loss)</th></tr></thead><tbody id="fx-body"></tbody><tfoot id="fx-footer" style="background:#fdf2f8; font-weight:bold;"></tfoot></table>
+        </div>
+        <div style="text-align:right; margin-top:10px;"><button class="btn btn-green" onclick="exportFX()">Export FX Paper</button></div>
+    </div>
+</div>
+
+<script>
+    // --- AUTHENTICATION ---
+    function checkLogin() {
+        if(document.getElementById('username').value==='admin' && document.getElementById('password').value==='1234') {
+            document.getElementById('login-screen').style.display='none'; document.getElementById('app-container').style.display='flex';
+        } else document.getElementById('login-msg').style.display='block';
+    }
+    function logout() { location.reload(); }
+
+    // --- STATE MANAGEMENT ---
+    let app = { suppliers: {} };
+    let currentSup = null;
+    let detectedCurrencies = new Set();
+
+    window.onload = () => {
+        const s = localStorage.getItem('ap_v16');
+        if(s) { app = JSON.parse(s); renderSidebar(); }
+    };
+    function save() { 
+        localStorage.setItem('ap_v16', JSON.stringify(app)); 
+        document.getElementById('save-status').style.opacity=1; 
+        setTimeout(()=>document.getElementById('save-status').style.opacity=0, 1000); 
+    }
+
+    // --- IMPORT GL LOGIC ---
+    function handleFile(el) {
+        const f = el.files[0]; if(!f) return;
+        const r = new FileReader();
+        if(f.name.toLowerCase().endsWith('.csv')) {
+            r.readAsText(f, 'windows-874'); 
+            r.onload = e => {
+                if(e.target.result.includes('วันที่')) processCSV(e.target.result);
+                else { const r2=new FileReader(); r2.readAsText(f,'utf-8'); r2.onload=e2=>processCSV(e2.target.result); }
+            };
+        } else {
+            r.readAsArrayBuffer(f);
+            r.onload = e => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+                processArray(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1}));
+            };
+        }
+        el.value='';
+    }
+    function processCSV(txt) {
+        const lines = txt.split(/\r\n|\n/).map(l => (l.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[]).map(m=>m.replace(/^"|"$/g,'').trim()));
+        processArray(lines);
+    }
+    function processArray(rows) {
+        let hIdx=-1, c={d:-1, des:-1, dr:-1, cr:-1, item:-1, name:-1};
+        for(let i=0; i<Math.min(rows.length,50); i++) {
+            const r = rows[i].map(x=>String(x).toLowerCase());
+            if(r.some(x=>x.includes('วันที่')||x.includes('date'))) {
+                hIdx=i;
+                r.forEach((v,k)=>{
+                    if(v.includes('วันที่')) c.d=k;
+                    else if(v.includes('ชื่อเจ้าหนี้')||v.includes('supplier')) c.name=k;
+                    else if(v.includes('ใบสำคัญ')||v.includes('เอกสาร')||v.includes('voucher')||v.includes('รายการ')&&!v.includes('อธิบาย')) c.item=k;
+                    else if(v.includes('รายการ')||v.includes('อธิบาย')||v.includes('desc')) c.des=k;
+                    else if(v.includes('เดบิต')) c.dr=k;
+                    else if(v.includes('เครดิต')) c.cr=k;
+                }); break;
+            }
+        }
+        if(hIdx===-1) return alert("ไม่พบหัวตาราง");
+
+        let cnt=0;
+        for(let i=hIdx+1; i<rows.length; i++) {
+            const r = rows[i]; if(!r[c.d]) continue;
+            let dr = parseFloat(String(r[c.dr]||0).replace(/,/g,''))||0;
+            let cr = parseFloat(String(r[c.cr]||0).replace(/,/g,''))||0;
+            if(dr==0 && cr==0) continue;
+
+            let rawName = (c.name > -1 && r[c.name]) ? r[c.name] : (r[c.des]||"");
+            let name = cleanName(rawName);
+            if(!app.suppliers[name]) app.suppliers[name] = { txns:[] };
+
+            let dStr = parseDate(r[c.d]);
+            let itemRef = (c.item > -1 && r[c.item]) ? String(r[c.item]).trim() : "";
+
+            let exists = app.suppliers[name].txns.some(t => t.d===dStr && t.dr===dr && t.cr===cr && t.item===itemRef);
+            if(!exists) {
+                app.suppliers[name].txns.push({
+                    id: Date.now()+Math.random(), d:dStr, item:itemRef, des:r[c.des]||"", 
+                    dr:dr, cr:cr, fx:0, curr:"", matched:false
+                });
+                cnt++;
+            }
+        }
+        save(); renderSidebar(); alert(`Import สำเร็จ ${cnt} รายการ`);
+    }
+    
+    // --- HELPER FUNCTIONS ---
+    function cleanName(t) {
+        t = String(t).replace(/^(ซื้อเชื่อจาก|เจ้าหนี้|จ่ายชำระหนี้|จ่าย|รับ|ซื้อ|เงินมัดจำ|ค่า)\s*/g, '');
+        t = t.replace(/(บริษัท|จำกัด|หจก\.|บจก\.|มหาชน|\(สำนักงานใหญ่\)|\(มหาชน\)|Co\.,Ltd|Ltd\.|Inc\.|GmbH|& Co\. KG)/gi, '');
+        return t.trim() || "ไม่ระบุ";
+    }
+    function parseDate(v) {
+        if(typeof v==='number') return new Date((v-25569)*864e5).toLocaleDateString('en-GB');
+        let s = String(v).trim();
+        if(s.match(/\d{4}/)) { let p=s.split(/[-/]/); if(p.length===3 && parseInt(p[0])>2400) s=s.replace(p[0], parseInt(p[0])-543); }
+        return s;
+    }
+
+    // --- UI RENDERERS ---
+    function renderSidebar() {
+        const el = document.getElementById('sup-list'); el.innerHTML='';
+        let totalAP = 0;
+        
+        Object.keys(app.suppliers).sort().forEach(k => {
+            let s = app.suppliers[k];
+            let bal = s.txns.reduce((a,b)=>a+(b.cr-b.dr), 0); 
+            totalAP += bal;
+            
+            let div = document.createElement('div');
+            div.className = `sup-item ${currentSup===k?'active':''}`;
+            div.onclick = () => { currentSup=k; renderDetail(k); renderSidebar(); };
+            div.innerHTML = `<span class="sup-name">${k}</span><div class="sup-bal"><span>${s.txns.length} items</span><span style="font-weight:bold; color:${bal>0?'#be123c':'#10b981'}">${fmt(bal)}</span></div>`;
+            el.appendChild(div);
+        });
+        
+        // Update Dashboard Summary
+        document.getElementById('sum-total-ap').innerText = fmt(totalAP);
+    }
+
+    function renderDetail(key) {
+        const s = app.suppliers[key];
+        const area = document.getElementById('detail-view');
+        let bal = s.txns.reduce((a,b)=>a+(b.cr-b.dr),0);
+        let outBal = s.txns.filter(t=>!t.matched).reduce((a,b)=>a+(b.cr-b.dr),0);
+
+        area.innerHTML = `
+            <div class="detail-header">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="margin:0; color:var(--primary);">${key}</h2>
+                    <div style="text-align:right"><span style="font-size:0.8rem; color:#64748b;">หนี้คงเหลือ (Total AP)</span><span style="font-size:1.5rem; font-weight:bold; color:#be123c;">${fmt(bal)}</span></div>
+                </div>
+                <div style="margin-top:10px;">
+                    <button class="btn btn-blue" onclick="autoMatch('${key}')">Auto Match (ยอดตรง)</button>
+                    <button class="btn btn-purple" onclick="manualMatch('${key}')">จับคู่ที่เลือก</button>
+                </div>
+            </div>
+            <div class="tabs">
+                <div class="tab-btn active" onclick="switchTab(this,'tab-out')">รายการคงค้าง (${fmt(outBal)})</div>
+                <div class="tab-btn" onclick="switchTab(this,'tab-hist')">ประวัติการจ่าย</div>
+            </div>
+            <div id="tab-out" class="tab-content active" style="flex:1; overflow:auto;">${renderTable(s.txns.filter(t=>!t.matched), key, false)}</div>
+            <div id="tab-hist" class="tab-content" style="flex:1; overflow:auto;">
+                <button class="btn btn-gray btn-sm no-print" onclick="undoMatch('${key}')" style="margin:10px;">ยกเลิกการจับคู่</button>
+                ${renderTable(s.txns.filter(t=>t.matched), key, true)}
+            </div>
+        `;
+    }
+
+    function renderTable(data, key, isHist) {
+        if(!data.length) return '<div class="empty-state"><p>ไม่มีรายการ</p></div>';
+        let html = `<table><thead><tr><th width="30"><input type="checkbox" onchange="toggleChk(this, '${isHist?'hist':'out'}')"></th><th>วันที่</th><th>Item (เลขที่)</th><th>รายการ</th><th class="num">เดบิต (จ่าย)</th><th class="num">เครดิต (หนี้)</th><th>เงินตราต่างประเทศ</th></tr></thead><tbody>`;
+        data.forEach(t => {
+            let idx = app.suppliers[key].txns.findIndex(x=>x.id===t.id);
+            html += `<tr><td><input type="checkbox" class="chk-${isHist?'hist':'out'} chk-row" value="${idx}"></td><td>${t.d}</td>
+            <td><span style="background:#f1f5f9; padding:2px 5px; border-radius:4px; font-size:0.85em; font-weight:bold; color:#4338ca;">${t.item||""}</span></td>
+            <td>${t.des}</td><td class="num col-dr">${t.dr>0?fmt(t.dr):'-'}</td><td class="num col-cr">${t.cr>0?fmt(t.cr):'-'}</td>
+            <td align="center"><input class="fx-inp" value="${t.fx||''}" placeholder="0.00" onchange="upd('${key}',${idx},'fx',this.value)"> <input class="cur-inp" value="${t.curr||''}" placeholder="CUR" onchange="upd('${key}',${idx},'curr',this.value)"> <button class="btn-del-row" onclick="delRow('${key}',${idx})">x</button></td></tr>`;
+        });
+        return html + '</tbody></table>';
+    }
+
+    // --- MATCHING LOGIC ---
+    function autoMatch(key) {
+        let s = app.suppliers[key]; let m=0;
+        s.txns.forEach(t1 => {
+            if(!t1.matched && t1.dr > 0) { // Payment
+                let idx2 = s.txns.findIndex(t2 => !t2.matched && t2.cr > 0 && Math.abs(t2.cr - t1.dr) < 0.05);
+                if(idx2 !== -1) { t1.matched = true; s.txns[idx2].matched = true; m++; }
+            }
+        });
+        save(); renderDetail(key); renderSidebar(); alert(`จับคู่สำเร็จ ${m} คู่`);
+    }
+    function manualMatch(key) {
+        let chks = document.querySelectorAll('.chk-out:checked');
+        if(!chks.length) return alert('เลือกรายการที่จะจับคู่');
+        let sumDr=0, sumCr=0;
+        chks.forEach(c => { let t = app.suppliers[key].txns[c.value]; sumDr+=t.dr; sumCr+=t.cr; });
+        let diff = sumCr - sumDr; 
+        if(Math.abs(diff) > 0.05) {
+            if(confirm(`ยอดไม่เท่ากัน (เหลือหนี้ ${fmt(diff)})\nต้องการตั้งยอดคงเหลือ (Carry Forward) หรือไม่?`)) {
+                app.suppliers[key].txns.push({ id:Date.now(), d:new Date().toLocaleDateString('en-GB'), item:"CF", des:"ยอดคงเหลือยกไป", dr:0, cr:diff, fx:0, curr:"", matched:false });
+            } else return;
+        }
+        chks.forEach(c => app.suppliers[key].txns[c.value].matched = true);
+        save(); renderDetail(key); renderSidebar();
+    }
+    function undoMatch(key) {
+        let chks = document.querySelectorAll('.chk-hist:checked');
+        chks.forEach(c => app.suppliers[key].txns[c.value].matched = false);
+        save(); renderDetail(key); renderSidebar();
+    }
+
+    // --- FX LOGIC ---
+    function scanCurrencies() { detectedCurrencies=new Set(); for(let k in app.suppliers) app.suppliers[k].txns.forEach(t=>{ if(t.curr) detectedCurrencies.add(t.curr.toUpperCase().trim()); }); }
+    function openFXModal() {
+        scanCurrencies(); const con=document.getElementById('fx-rate-inputs'); con.innerHTML='';
+        if(detectedCurrencies.size === 0) con.innerHTML = '<span style="color:#666;">ไม่พบสกุลเงิน (กรุณาระบุในตาราง)</span>';
+        else detectedCurrencies.forEach(c => { con.innerHTML += `<div class="rate-box"><span class="rate-label">${c}:</span><input id="rate-${c}" class="fx-inp" onchange="calcFX()"></div>`; });
+        document.getElementById('fxModal').style.display='block'; calcFX();
+    }
+    function calcFX() {
+        let rates={}; detectedCurrencies.forEach(c=>rates[c]=parseFloat(document.getElementById(`rate-${c}`).value)||0);
+        let html='', total=0;
+        Object.keys(app.suppliers).forEach(k=>{
+            let curs={};
+            app.suppliers[k].txns.filter(t=>!t.matched).forEach(t=>{
+                let c=(t.curr||'').toUpperCase().trim();
+                if(c && c!=='THB') { if(!curs[c])curs[c]={fx:0,bk:0}; curs[c].fx+=parseFloat(t.fx)||0; curs[c].bk+=(t.cr-t.dr); }
+            });
+            for(let c in curs) {
+                if(curs[c].fx>0) {
+                    // For AP (Liability):
+                    // Book Value (Current THB) vs Fair Value (FX * Rate)
+                    // If Book > Fair -> Gain (Hooray, debt is cheaper)
+                    // If Book < Fair -> Loss (Oh no, debt is more expensive)
+                    let r=rates[c]||0, bk=curs[c].bk, rev=curs[c].fx*r, diff=bk-rev;
+                    total+=diff;
+                    html+=`<tr><td>${k}</td><td>${c}</td><td class="num">${fmt(curs[c].fx)}</td><td class="num">${fmt(bk)}</td><td class="num">${fmt(rev)}</td><td class="num ${diff>=0?'gain-text':'loss-text'}">${fmt(diff)}</td></tr>`;
+                }
+            }
+        });
+        document.getElementById('fx-body').innerHTML=html || '<tr><td colspan="6" align="center">ไม่มีข้อมูล</td></tr>';
+        document.getElementById('fx-footer').innerHTML=`<tr><td colspan="5" align="right">Net Gain/(Loss):</td><td class="num ${total>=0?'gain-text':'loss-text'}">${fmt(total)}</td></tr>`;
+    }
+
+    // --- REPORT IMPORT ---
+    function handleReportFile(el) {
+        const f = el.files[0]; if(!f) return;
+        const r = new FileReader();
+        r.readAsText(f, 'windows-874');
+        r.onload = e => {
+            if(e.target.result.includes('รวมเจ้าหนี้') || e.target.result.includes('Total')) parseReportCSV(e.target.result);
+            else { const r2=new FileReader(); r2.readAsText(f,'utf-8'); r2.onload=e2=>parseReportCSV(e2.target.result); }
+        };
+        el.value='';
+    }
+    function parseReportCSV(txt) {
+        const lines = txt.split(/\r\n|\n/);
+        let matchCount = 0;
+        lines.forEach(line => {
+            if(line.includes('รวมเจ้าหนี้')) {
+                const cols = (line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || []).map(m=>m.replace(/^"|"$/g, '').trim());
+                let totalIdx = cols.findIndex(c => c === 'รวมเจ้าหนี้');
+                if(totalIdx > -1 && cols.length > totalIdx + 1) {
+                    let name = cleanName(cols[totalIdx + 1]);
+                    let amt = 0;
+                    for(let i=cols.length-1; i>totalIdx; i--) {
+                        let v = parseFloat(cols[i].replace(/,/g,''));
+                        if(!isNaN(v) && v !== 0) { amt = v; break; }
+                    }
+                    if(app.suppliers[name]) { app.suppliers[name].gl_balance = amt; matchCount++; }
+                    else { app.suppliers[name] = { txns:[], gl_balance:amt }; matchCount++; }
+                }
+            }
+        });
+        save(); renderCompTable(); alert(`ดึงยอดจากรายงานสำเร็จ: ${matchCount} รายการ`);
+    }
+
+    // --- COMPARATOR ---
+    function openCompModal() { document.getElementById('compModal').style.display='block'; renderCompTable(); }
+    function renderCompTable() {
+        const tb = document.getElementById('comp-body'); tb.innerHTML = '';
+        let totalDiff = 0;
+        Object.keys(app.suppliers).sort().forEach(k => {
+            const s = app.suppliers[k];
+            let calcBal = s.txns.reduce((a,b)=>a+(b.cr-b.dr), 0);
+            let glBal = s.gl_balance || 0;
+            let diff = calcBal - glBal;
+            totalDiff += diff;
+            tb.innerHTML += `<tr><td>${k}</td><td class="num">${fmt(calcBal)}</td><td align="center"><input class="comp-inp" type="number" value="${s.gl_balance||''}" onchange="updGL('${k}',this.value)"></td><td class="num"><span class="${Math.abs(diff)<0.05?'diff-ok':'diff-err'}">${fmt(diff)}</span></td></tr>`;
+        });
+        document.getElementById('total-diff-val').innerText = fmt(totalDiff);
+    }
+    function updGL(k,v) { app.suppliers[k].gl_balance = parseFloat(v)||0; save(); renderCompTable(); }
+
+    // --- UTILS ---
+    function addBF() { if(!currentSup) return alert('เลือกเจ้าหนี้'); document.getElementById('bf-sup-key').value=currentSup; document.getElementById('bfModal').style.display='block'; }
+    function saveBF() {
+        let k=document.getElementById('bf-sup-key').value;
+        app.suppliers[k].txns.unshift({ id:Date.now(), d:document.getElementById('bf-date').value, item:document.getElementById('bf-item').value, des:document.getElementById('bf-desc').value, dr:0, cr:parseFloat(document.getElementById('bf-amt').value)||0, fx:parseFloat(document.getElementById('bf-fx-amt').value)||0, curr:document.getElementById('bf-fx-curr').value, matched:false });
+        closeModal('bfModal'); save(); renderDetail(k); renderSidebar();
+    }
+    function switchTab(el, id) { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none'); document.getElementById(id).style.display='block'; }
+    function upd(k,i,f,v) { app.suppliers[k].txns[i][f]=v; save(); }
+    function delRow(k,i) { if(confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) { app.suppliers[k].txns.splice(i,1); save(); renderDetail(k); } }
+    function toggleChk(el, type) { document.querySelectorAll(`.chk-${type}`).forEach(c=>c.checked=el.checked); }
+    function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function fmt(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2}); }
+    function clearData() { if(confirm('⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบ!\nยืนยันการล้างข้อมูล?')) { app={suppliers:{}}; save(); location.reload(); } }
+    function backupData() { const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app)); a.download = "AP_Backup.json"; a.click(); }
+    function restoreData(el) { const r = new FileReader(); r.onload=e=>{ app=JSON.parse(e.target.result); save(); renderSidebar(); alert("Restore ข้อมูลสำเร็จ"); }; r.readAsText(el.files[0]); }
+    
+    // --- EXPORTS ---
+    function exportReport() {
+        let d = [["Supplier","Date","Item","Desc","Dr","Cr","FX","Curr","Status"]];
+        Object.keys(app.suppliers).sort().forEach(k=>{ app.suppliers[k].txns.forEach(t=>{ if(!t.matched)d.push([k,t.d,t.item,t.des,t.dr,t.cr,t.fx,t.curr,"Outstanding"]); }); });
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, "AP_Report.xlsx");
+    }
+    function exportComp() {
+        let d = [["Supplier", "Calculated", "Report Balance", "Diff", "Status"]];
+        Object.keys(app.suppliers).sort().forEach(k => {
+            let s=app.suppliers[k], c=s.txns.reduce((a,b)=>a+(b.cr-b.dr),0), g=s.gl_balance||0;
+            d.push([k, c, g, c-g, Math.abs(c-g)<0.05?"OK":"Diff"]);
+        });
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "Compare"); XLSX.writeFile(wb, "GL_Compare.xlsx");
+    }
+    function exportFX() {
+        let d = [["Supplier", "Currency", "FX Amount", "Book Value", "Fair Value", "Gain/Loss"]];
+        let rates={}; detectedCurrencies.forEach(c=>rates[c]=parseFloat(document.getElementById(`rate-${c}`).value)||0);
+        Object.keys(app.suppliers).forEach(k=>{
+            let s=app.suppliers[k], curs={};
+            s.txns.filter(t=>!t.matched).forEach(t=>{
+                let c=(t.curr||'').toUpperCase().trim();
+                if(c&&c!=='THB'){ if(!curs[c])curs[c]={fx:0,bk:0}; curs[c].fx+=parseFloat(t.fx)||0; curs[c].bk+=(t.cr-t.dr); }
+            });
+            for(let c in curs) {
+                if(curs[c].fx>0) {
+                    let r=rates[c]||0, bk=curs[c].bk, rev=curs[c].fx*r, diff=bk-rev;
+                    d.push([k, c, curs[c].fx, bk, rev, diff]);
+                }
+            }
+        });
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "FX"); XLSX.writeFile(wb, "FX_Reval.xlsx");
+    }
+</script>
+</body>
+</html>

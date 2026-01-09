@@ -3,351 +3,284 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-Audit Pro : Final Edition</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>M-Audit Dashboard : Secured Portal</title>
     
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <style>
-        /* --- 🎨 THEME: PROFESSIONAL BLUE --- */
-        :root { 
-            --primary: #1e3a8a; --accent: #3b82f6; --bg: #f8fafc; 
-            --warn: #f59e0b; --danger: #ef4444; --success: #10b981;
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f6f9; }
+        
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #333;
         }
-        body { font-family: 'Sarabun', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; font-size: 14px; }
+
+        /* --- LOGIN SCREEN --- */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: white; padding: 40px; border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            width: 320px; text-align: center;
+        }
+        .login-input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border: 1px solid #ccc; border-radius: 8px;
+            font-family: 'Sarabun'; box-sizing: border-box;
+        }
+        .login-btn {
+            width: 100%; padding: 12px; background: var(--accent); color: white;
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+            transition: 0.3s;
+        }
+        .login-btn:hover { background: #2980b9; }
+        .login-err { color: #e74c3c; margin-top: 10px; display: none; font-size: 0.9rem; }
+        .loading-spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid var(--accent);
+            border-radius: 50%; width: 20px; height: 20px;
+            animation: spin 1s linear infinite; margin: 10px auto; display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- MAIN APP CONTAINER --- */
+        #app-container {
+            display: none; /* ซ่อนไว้ก่อนจนกว่าจะ Login ผ่าน */
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .header { text-align: center; margin-bottom: 40px; position: relative; width: 100%; max-width: 1000px; }
+        .header h1 { color: var(--primary); margin-bottom: 5px; font-size: 2rem; }
+        .header p { color: #7f8c8d; margin: 0; }
         
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 10px rgba(0,0,0,0.1); overflow-y: auto; }
-        .brand { padding: 25px; text-align: center; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .menu-group { font-size: 0.7rem; color: #93c5fd; padding: 15px 25px 5px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
-        .menu-item { padding: 10px 25px; cursor: pointer; display: flex; align-items: center; border-left: 4px solid transparent; transition: 0.2s; color: #dbeafe; }
-        .menu-item:hover { background: rgba(255,255,255,0.1); }
-        .menu-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--accent); color: white; font-weight: 600; }
-        .menu-item i { width: 25px; font-size: 1.1em; }
+        .user-info {
+            position: absolute; top: 0; right: 0;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .user-email { font-size: 0.85rem; color: #666; display: none; } /* Show on desktop */
+        @media (min-width: 768px) { .user-email { display: block; } }
 
-        /* MAIN CONTENT */
-        .main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; height: 100%; }
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
-        .page-section { display: none; height: 100%; flex-direction: column; }
-        .page-section.active { display: flex; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .logout-btn {
+            background: #e74c3c; color: white; border: none;
+            padding: 5px 15px; border-radius: 20px; cursor: pointer;
+            font-family: 'Sarabun'; font-size: 0.85rem;
+        }
 
-        /* TABS */
-        .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; gap: 2px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #f8fafc; font-family: 'Sarabun'; font-weight: 600; color: #64748b; border-radius: 8px 8px 0 0; }
-        .tab-btn:hover { background: #e2e8f0; color: var(--primary); }
-        .tab-btn.active { background: white; color: var(--primary); border-top: 3px solid var(--accent); border-bottom: 2px solid white; margin-bottom: -2px; }
-        .tab-content { display: none; height: 100%; flex-direction: column; }
-        .tab-content.active { display: flex; }
+        /* Grid Container */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
+            width: 100%;
+        }
 
-        /* TABLES */
-        .table-container { flex: 1; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        th { background: #f8fafc; padding: 10px; position: sticky; top: 0; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; z-index: 10; white-space: nowrap; }
-        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
-        input.tbl-inp { width: 100%; background: transparent; border: none; text-align: right; font-family: 'Sarabun'; }
-        input.tbl-inp:focus { outline: 1px solid var(--accent); background: white; }
-        input.center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        /* UTILS */
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-add { background: var(--accent); }
-        .btn-save { background: var(--warn); width: 100%; justify-content: center; padding: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px;}
-        .btn-import { background: #8b5cf6; }
-        .btn-excel { background: var(--success); }
-        .btn-del { background: var(--danger); padding: 4px 8px; font-size: 0.7em; }
-        .diff-err { color: var(--danger); font-weight: bold; }
-        .diff-ok { color: var(--success); font-weight: bold; }
-        .row-checked { background-color: #ecfdf5 !important; }
-        .row-unchecked { background-color: #fff1f2 !important; }
-        .hidden { display: none !important; }
+        /* Menu Card */
+        .menu-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
 
-        /* CUSTOM GRID */
-        .bank-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; height: 100%; min-height: 400px; }
-        .bank-col { display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white; }
-        .cust-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; }
-        .cust-item:hover { background: #f0f9ff; }
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: var(--accent);
+        }
 
-        /* CIT SECTION */
-        .cit-section { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; background: #fff; }
-        .cit-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.95em; }
-        .cit-row label { flex: 1; color: #475569; }
-        .cit-row input { width: 120px; text-align: right; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; }
-        .cit-head { font-weight: bold; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
+        .icon { font-size: 45px; margin-bottom: 15px; display: block; }
+        .title { font-size: 1.2rem; font-weight: bold; display: block; margin-bottom: 5px; color: var(--primary); }
+        .desc { font-size: 0.9rem; color: #666; }
 
-        @media print { .sidebar, .no-print { display: none !important; } .card { border: none; box-shadow: none; } }
+        /* Back Button */
+        .back-btn {
+            margin-top: 50px;
+            padding: 10px 25px;
+            background-color: #95a5a6;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            transition: 0.3s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .back-btn:hover { background-color: #7f8c8d; }
+
     </style>
 </head>
 <body>
 
-<nav class="sidebar">
-    <div class="brand">
-        <h3><i class="fas fa-chart-line"></i> M-Audit Pro</h3>
-        <small>Version 8.0 Final</small>
-    </div>
-    
-    <div class="menu-group">Main System</div>
-    <div class="menu-item active" onclick="navTo('page-settings', this)"><i class="fas fa-cog"></i> ตั้งค่า / ข้อมูล</div>
-    <div class="menu-item" onclick="navTo('page-vat', this)"><i class="fas fa-percent"></i> ภาษีมูลค่าเพิ่ม (ภพ.30)</div>
-    <div class="menu-item" onclick="navTo('page-wht', this)"><i class="fas fa-file-invoice-dollar"></i> หัก ณ ที่จ่าย (WHT)</div>
-    <div class="menu-item" onclick="navTo('page-bank', this)"><i class="fas fa-university"></i> Bank Reconciliation</div>
-    
-    <div class="menu-group">Input Tax Tools</div>
-    <div class="menu-item" onclick="navTo('page-input-recon', this)"><i class="fas fa-search-dollar"></i> Reconcile ภาษีซื้อ</div>
-    <div class="menu-item" onclick="navTo('page-input-check', this)"><i class="fas fa-tasks"></i> ตรวจใบกำกับภาษี</div>
-
-    <div class="menu-group">Payroll & Assets</div>
-    <div class="menu-item" onclick="navTo('page-sso', this)"><i class="fas fa-users"></i> ประกันสังคม (สปส.)</div>
-    <div class="menu-item" onclick="navTo('page-kt20', this)"><i class="fas fa-clipboard-list"></i> กท.20 (กองทุนทดแทน)</div>
-    <div class="menu-item" onclick="navTo('page-assets', this)"><i class="fas fa-building"></i> ทะเบียนทรัพย์สิน</div>
-    
-    <div class="menu-group">Closing</div>
-    <div class="menu-item" onclick="navTo('page-cit', this)"><i class="fas fa-balance-scale"></i> ภ.ง.ด.50 (CIT)</div>
-
-    <div style="padding: 20px; margin-top: auto;">
-        <button class="btn btn-save" onclick="manualSave()"><i class="fas fa-save"></i> บันทึกข้อมูล</button>
-    </div>
-</nav>
-
-<main class="main">
-    <div id="saveStatus" style="position:fixed; top:20px; right:20px; background:#10b981; color:white; padding:5px 15px; border-radius:20px; opacity:0; transition:0.5s;">บันทึกแล้ว</div>
-
-    <div id="page-settings" class="page-section active">
-        <div class="card h-auto">
-            <h3 style="color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">ข้อมูลกิจการ</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                <div><label>ชื่อกิจการ</label><input type="text" id="conf_name" class="tbl-inp" style="border:1px solid #ccc; padding:5px;" onchange="saveConfig()"></div>
-                <div><label>เลขผู้เสียภาษี</label><input type="text" id="conf_taxid" class="tbl-inp" style="border:1px solid #ccc; padding:5px;" onchange="saveConfig()"></div>
-            </div>
-            <div style="margin-top:20px; background:#fffbeb; padding:15px; border-radius:8px; border:1px solid #fcd34d;">
-                <strong><i class="fas fa-columns"></i> ตั้งค่า GL รายได้ (สำหรับกระทบยอด)</strong>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:5px;">
-                    <input type="text" id="conf_gl1" class="tbl-inp" style="background:white; border:1px solid #ccc; padding:2px;" placeholder="ชื่อบัญชี 1" onchange="saveConfig()">
-                    <input type="text" id="conf_gl2" class="tbl-inp" style="background:white; border:1px solid #ccc; padding:2px;" placeholder="ชื่อบัญชี 2" onchange="saveConfig()">
-                    <input type="text" id="conf_gl3" class="tbl-inp" style="background:white; border:1px solid #ccc; padding:2px;" placeholder="ชื่อบัญชี 3" onchange="saveConfig()">
-                </div>
-            </div>
-            <div style="margin-top:20px;">
-                <button class="btn btn-add" onclick="backupData()">Backup</button>
-                <input type="file" id="resFile" class="hidden" onchange="restoreData(this)">
-                <button class="btn btn-excel" onclick="document.getElementById('resFile').click()">Restore</button>
-                <button class="btn" style="background:#64748b;" onclick="resetSystem()">Reset System</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="page-vat" class="page-section">
-        <div class="card full-height">
-            <div class="header-row"><h3 style="color:var(--primary);">ภาษีมูลค่าเพิ่ม (ภ.พ.30)</h3></div>
-            <div class="tabs no-print">
-                <button class="tab-btn active" onclick="setTab(this, 'vat-pp30')">1. สรุปยื่นแบบ ภ.พ.30</button>
-                <button class="tab-btn" onclick="setTab(this, 'vat-recon')">2. กระทบยอดรายได้ (GL)</button>
-                <button class="tab-btn" onclick="setTab(this, 'vat-def')">3. ทะเบียนรับล่วงหน้า</button>
-            </div>
+    <div id="login-screen">
+        <div class="login-box">
+            <div style="font-size:3rem; color:var(--accent); margin-bottom:10px;"><i class="fas fa-shield-alt"></i></div>
+            <h2 style="margin:0 0 20px 0; color:var(--primary);">M-Audit System</h2>
             
-            <div id="vat-pp30" class="tab-content active">
-                <div class="no-print mb-2"><button class="btn btn-add" onclick="addPP30Row()">เพิ่มเดือน</button></div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="no-print">Del</th><th>เดือน</th>
-                                <th>ยอดขาย</th><th>ภาษีขาย</th><th>ยอดซื้อ</th><th>ภาษีซื้อ</th>
-                                <th>ชำระ/(คืน)</th>
-                                <th style="background:#f0fdf4; color:#166534;">วันที่ชำระ</th>
-                                <th style="background:#f0fdf4; color:#166534;">เลขที่ใบเสร็จ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tb-pp30"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="vat-recon" class="tab-content">
-                <div class="no-print mb-2 text-right"><input type="file" id="f-rev-gl" class="hidden" onchange="impUniv(this, 'revGL')"><button class="btn btn-import" onclick="document.getElementById('f-rev-gl').click()">Import GL รายได้</button></div>
-                <div class="table-container"><table><thead><tr><th rowspan="2">เดือน</th><th rowspan="2">ยอดขาย (ภพ.30)</th><th colspan="4" style="background:#eff6ff;">GL Revenue</th><th rowspan="2">ผลต่าง</th><th rowspan="2">หมายเหตุ</th></tr><tr><th id="th_gl1">GL1</th><th id="th_gl2">GL2</th><th id="th_gl3">GL3</th><th>รวม GL</th></tr></thead><tbody id="tb-rev-recon"></tbody><tfoot id="tf-rev-recon" style="background:#f8f9fa; font-weight:bold;"></tfoot></table></div>
-            </div>
-
-            <div id="vat-def" class="tab-content">
-                <div class="no-print mb-2" style="display:flex; justify-content:space-between;"><input type="text" id="searchDef" placeholder="🔍 ค้นหา..." style="padding:5px; border:1px solid #ccc; border-radius:4px;" onkeyup="renderDeferred()"><div><button class="btn" style="background:#64748b;" onclick="clearDef()">ล้าง</button><input type="file" id="f-def" class="hidden" onchange="impUniv(this, 'def')"><button class="btn btn-import" onclick="document.getElementById('f-def').click()">Import Express GL</button></div></div>
-                <div class="bank-grid"><div class="bank-col" id="def-list" style="overflow-y:auto;"></div><div class="bank-col" style="padding:10px; overflow-y:auto;"><h4 id="def-title" style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">รายละเอียด</h4><div id="def-detail"></div></div></div>
-            </div>
+            <input type="email" id="email" class="login-input" placeholder="อีเมล (เช่น admin@maudit.com)">
+            <input type="password" id="password" class="login-input" placeholder="รหัสผ่าน" onkeypress="if(event.key==='Enter') doLogin()">
+            
+            <button class="login-btn" onclick="doLogin()">เข้าสู่ระบบ (Firebase)</button>
+            <div id="loader" class="loading-spinner"></div>
+            <div id="login-msg" class="login-err"></div>
         </div>
     </div>
 
-    <div id="page-wht" class="page-section">
-        <div class="card"><div class="header-row"><h3 style="color:var(--primary);">หัก ณ ที่จ่าย (Summary)</h3></div><div class="tabs no-print"><button class="tab-btn active" onclick="setWHTTab(this, 'pnd1')">ภ.ง.ด.1</button><button class="tab-btn" onclick="setWHTTab(this, 'pnd3')">ภ.ง.ด.3</button><button class="tab-btn" onclick="setWHTTab(this, 'pnd53')">ภ.ง.ด.53</button></div><div class="table-container"><table><thead><tr><th>เดือน</th><th>ยอดจ่าย</th><th>ภาษี</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-wht"></tbody></table></div></div>
-    </div>
-
-    <div id="page-bank" class="page-section">
-        <div class="card"><div class="header-row"><h3 style="color:var(--primary);">Bank Reconciliation</h3></div><div class="no-print" style="background:#f0f9ff; padding:10px; margin-bottom:10px; border-radius:5px; display:flex; gap:10px;"><button class="btn btn-import" onclick="document.getElementById('bg').click()">1. Import GL</button><input type="file" id="bg" hidden onchange="impUniv(this,'bankGL')"><button class="btn btn-excel" onclick="document.getElementById('bs').click()">2. Import Stmt</button><input type="file" id="bs" hidden onchange="impStmt(this)"><button class="btn btn-add" onclick="runBankRecon()">Run Recon</button><span id="bank-stat" style="font-size:0.8em; color:#666; align-self:center;"></span></div><div style="display:flex; gap:10px; height:100%;"><div style="flex:1; border:1px solid #ddd; border-radius:5px; overflow:auto;"><div style="background:#fee2e2; padding:5px; font-weight:bold; color:#991b1b; text-align:center;">GL Unmatched</div><table id="tb-bank-gl"></table></div><div style="flex:1; border:1px solid #ddd; border-radius:5px; overflow:auto;"><div style="background:#ffedd5; padding:5px; font-weight:bold; color:#9a3412; text-align:center;">Bank Unmatched</div><table id="tb-bank-stmt"></table></div></div></div>
-    </div>
-
-    <div id="page-input-recon" class="page-section">
-        <div class="card"><div class="header-row"><h3 style="color:#d97706;">Reconcile ภาษีซื้อ (GL vs Report)</h3></div><div class="no-print" style="background:#fff7ed; padding:10px; margin-bottom:10px; border-radius:5px; display:flex; gap:10px; align-items:center;"><button class="btn btn-excel" onclick="document.getElementById('f-vat-rep').click()">1. Import Report</button><input type="file" id="f-vat-rep" hidden onchange="impUniv(this, 'vatRep')"><button class="btn btn-import" onclick="document.getElementById('f-vat-gl').click()">2. Import GL</button><input type="file" id="f-vat-gl" hidden onchange="impUniv(this, 'vatGL')"><button class="btn btn-add" style="margin-left:auto;" onclick="runInputVatRecon()">Run</button></div><div class="table-container"><table><thead><tr><th>สถานะ</th><th>Ref</th><th>รายละเอียด</th><th class="text-right">รายงาน</th><th class="text-right">GL</th><th class="text-right">ผลต่าง</th></tr></thead><tbody id="tb-input-recon"></tbody></table></div></div>
-    </div>
-
-    <div id="page-input-check" class="page-section">
-        <div class="card"><div class="header-row"><h3 style="color:#7c3aed;">Checklist ภาษีซื้อ</h3></div><div class="no-print" style="background:#f3e8ff; padding:10px; margin-bottom:10px; border-radius:5px; display:flex; gap:10px; align-items:center;"><button class="btn btn-import" onclick="document.getElementById('f-check').click()">Import File</button><input type="file" id="f-check" hidden onchange="impUniv(this, 'vatCheck')"><input type="text" placeholder="🔍 ค้นหา..." style="padding:5px; border:1px solid #ccc; width:150px;" onkeyup="searchCheck(event)"><div style="margin-left:auto;"><span id="check-stat" style="font-weight:bold; color:#6b21a8; margin-right:10px;"></span></div></div><div class="table-container"><table><thead><tr><th class="no-print"><input type="checkbox" onclick="toggleAllCheck(this)"></th><th>วันที่</th><th>ใบกำกับ</th><th>ผู้ขาย</th><th>มูลค่า</th><th>ภาษี</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-check"></tbody></table></div></div>
-    </div>
-
-    <div id="page-sso" class="page-section"><div class="card"><div class="header-row"><h3 style="color:var(--accent);">ประกันสังคม</h3></div><div class="table-container"><table><thead><tr style="background:#e0f2fe;"><th>เดือน</th><th>พนักงาน</th><th>ค่าจ้าง</th><th>พนง(5%)</th><th>นายจ้าง(5%)</th><th>รวมส่ง</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-sso"></tbody></table></div></div></div>
-    <div id="page-kt20" class="page-section"><div class="card"><div class="header-row"><h3 style="color:var(--success);">กองทุนทดแทน</h3><div class="no-print"><button class="btn btn-add" onclick="addKT20()">เพิ่มปี</button></div></div><div class="table-container"><table><thead><tr style="background:#ecfccb;"><th class="no-print">Del</th><th>ปี</th><th>คน</th><th>ค่าจ้างรวม</th><th>เงินสมทบ</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-kt20"></tbody></table></div></div></div>
-
-    <div id="page-assets" class="page-section"><div class="card"><div class="header-row"><h3 style="color:#059669;">ทะเบียนทรัพย์สิน</h3><div class="no-print"><button class="btn btn-add" onclick="addAsset()">เพิ่มรายการ</button></div></div><div class="table-container"><table><thead><tr style="background:#ecfdf5;"><th class="no-print">Del</th><th>ชื่อทรัพย์สิน</th><th>วันที่ซื้อ</th><th>ราคาทุน</th><th>อัตรา(%)</th><th>สะสมยกมา</th><th>ค่าเสื่อมปีนี้</th><th>สะสมยกไป</th><th>ราคาตามบัญชี</th></tr></thead><tbody id="tb-assets"></tbody><tfoot id="tf-assets" style="background:#f0fdf4; font-weight:bold;"></tfoot></table></div></div></div>
-
-    <div id="page-cit" class="page-section">
-        <div class="card h-auto">
-            <div class="header-row"><h3 style="color:#db2777;">คำนวณภาษีเงินได้นิติบุคคล (ภ.ง.ด.50)</h3></div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                <div class="cit-section" style="background:#fdf2f8; border-color:#fbcfe8;">
-                    <div class="cit-head">1. ปรับปรุงกำไรสุทธิ</div>
-                    <div class="cit-row"><label>กำไร(ขาดทุน) ทางบัญชี</label><input type="number" id="cit_net" onchange="calcCIT()"></div>
-                    
-                    <div class="cit-head" style="margin-top:10px; color:#9d174d;">(+) รายจ่ายบวกกลับ (Additions)</div>
-                    <div class="cit-row"><label>รายจ่ายต้องห้าม (ม.65 ตรี)</label><input type="number" id="cit_add1" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label>ค่ารับรองส่วนเกิน</label><input type="number" id="cit_add2" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label>อื่นๆ (เช่น ภาษีซื้อต้องห้าม)</label><input type="number" id="cit_add3" onchange="calcCIT()"></div>
-
-                    <div class="cit-head" style="margin-top:10px; color:#047857;">(-) รายการหักออก (Deductions)</div>
-                    <div class="cit-row"><label>รายได้ที่ได้รับยกเว้น</label><input type="number" id="cit_ded1" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label>สิทธิประโยชน์ทางภาษี (เช่น 2 เท่า)</label><input type="number" id="cit_ded2" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label>อื่นๆ</label><input type="number" id="cit_ded3" onchange="calcCIT()"></div>
-
-                    <hr>
-                    <div class="cit-row" style="font-weight:bold; font-size:1.1em; margin-top:10px;"><label>กำไร(ขาดทุน) ทางภาษี</label><span id="cit_tax_profit">0.00</span></div>
-                </div>
-
-                <div class="cit-section" style="background:#f0fdfa; border-color:#ccfbf1;">
-                    <div class="cit-head">2. คำนวณภาษี</div>
-                    <div class="cit-row"><label>อัตราภาษี (%)</label><input type="number" id="cit_rate" value="20" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label style="font-weight:bold;">ภาษีที่ต้องชำระ (CIT)</label><span id="cit_amount" style="font-weight:bold; color:#db2777;">0.00</span></div>
-                    
-                    <div class="cit-head" style="margin-top:15px;">หัก เครดิตภาษี</div>
-                    <div class="cit-row"><label>ภาษีถูกหัก ณ ที่จ่าย (WHT)</label><input type="number" id="cit_wht" onchange="calcCIT()"></div>
-                    <div class="cit-row"><label>ภาษีครึ่งปี (ภ.ง.ด.51)</label><input type="number" id="cit_half" onchange="calcCIT()"></div>
-                    
-                    <hr>
-                    <div class="cit-row" style="font-weight:bold; font-size:1.2em; margin-top:15px; color:#1e3a8a;"><label>ชำระเพิ่ม / (ขอคืน)</label><span id="cit_net_pay">0.00</span></div>
-                </div>
+    <div id="app-container">
+        <div class="header">
+            <h1>M-Audit System</h1>
+            <p>ศูนย์รวมเครื่องมือผู้ช่วยสอบบัญชี และตรวจสอบรายการ</p>
+            <div class="user-info">
+                <span id="display-email" class="user-email">...</span>
+                <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> ออก</button>
             </div>
         </div>
+
+        <div class="menu-grid">
+            <a href="./recon-bank/index.html" class="menu-card">
+                <span class="icon">🏦</span>
+                <span class="title">1. Recon Bank</span>
+                <span class="desc">กระทบยอดเงินฝากธนาคาร</span>
+            </a>
+
+            <a href="./ar/index.html" class="menu-card">
+                <span class="icon">💰</span>
+                <span class="title">2. AR (ลูกหนี้)</span>
+                <span class="desc">ตรวจสอบลูกหนี้ / Aging</span>
+            </a>
+
+            <a href="./ap/index.html" class="menu-card">
+                <span class="icon">🧾</span>
+                <span class="title">3. AP (เจ้าหนี้)</span>
+                <span class="desc">ตรวจสอบเจ้าหนี้ / จ่ายชำระ</span>
+            </a>
+
+            <a href="./deposit/index.html" class="menu-card">
+                <span class="icon">📥</span>
+                <span class="title">4. Deposit</span>
+                <span class="desc">ทะเบียนเงินรับฝาก / มัดจำ</span>
+            </a>
+
+            <a href="./tax-other/index.html" class="menu-card">
+                <span class="icon">📑</span>
+                <span class="title">5. Tax & Other</span>
+                <span class="desc">ภาษี, ประกันสังคม, ทรัพย์สิน</span>
+            </a>
+        </div>
+
+        <a href="../portal/index.html" class="back-btn"><i class="fas fa-arrow-left"></i> กลับหน้าหลัก Portal</a>
     </div>
 
-</main>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-<script>
-    // --- APP DATA ---
-    let app = {
-        config: {name:"", taxid:"", gl1:"", gl2:"", gl3:""},
-        pp30: [], whtData: { pnd1: [], pnd3: [], pnd53: [] }, ssoData: [], kt20Data: [],
-        bankData: { gl:[], stmt:[], uGL:[], uStmt:[] },
-        revGL: Array(12).fill({c1:0,c2:0,c3:0}), defLedger: {},
-        inputRecon: { rep:[], gl:[] }, inputCheck: [], assets: [], 
-        cit: { net:0, add1:0, add2:0, add3:0, ded1:0, ded2:0, ded3:0, rate:20, wht:0, half:0 }
-    };
-    const mo = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-    let curWHT = 'pnd1';
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMwa2H7l6rYiEmGPAPq2zMDEZilrzuwyE",
+            authDomain: "macc-audit.firebaseapp.com",
+            projectId: "macc-audit",
+            storageBucket: "macc-audit.firebasestorage.app",
+            messagingSenderId: "288410696416",
+            appId: "1:288410696416:web:f102c45ef70fc42ef4ee85",
+            measurementId: "G-NL8PYY1GTL"
+        };
 
-    // --- SYSTEM ---
-    window.onload = () => {
-        const d = localStorage.getItem('maudit_v8');
-        if(d) app = {...app, ...JSON.parse(d)};
-        if(!app.pp30.length) for(let i=0;i<12;i++) app.pp30.push({m:i,s:0,ts:0,b:0,tb:0, pd:'', rcp:''}); // Fixed structure
-        if(!app.cit) app.cit = { net:0, add1:0, add2:0, add3:0, ded1:0, ded2:0, ded3:0, rate:20, wht:0, half:0 };
-        bindUI(); renderAll();
-    }
-    function saveData() { localStorage.setItem('maudit_v8', JSON.stringify(app)); const s=document.getElementById('saveStatus'); s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1000); }
-    function manualSave() { saveData(); alert("บันทึกเรียบร้อย"); }
-    function bindUI() { 
-        ['conf_name','conf_taxid','conf_gl1','conf_gl2','conf_gl3'].forEach(id => { const el = document.getElementById(id); if(el) el.value = app.config[id.replace('conf_','')] || ''; });
-        document.getElementById('th_gl1').innerText = app.config.gl1 || 'GL1'; document.getElementById('th_gl2').innerText = app.config.gl2 || 'GL2'; document.getElementById('th_gl3').innerText = app.config.gl3 || 'GL3';
-        // CIT
-        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => document.getElementById('cit_'+k).value = app.cit[k]);
-    }
-    function saveConfig() { ['name','taxid','gl1','gl2','gl3'].forEach(k => app.config[k] = document.getElementById('conf_'+k).value); saveData(); bindUI(); }
-    function navTo(pid, el) { document.querySelectorAll('.page-section').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active')); document.getElementById(pid).classList.add('active'); el.classList.add('active'); if(pid==='page-vat') renderRevRecon(); }
-    function setTab(btn, tid) { const p = btn.closest('.card'); p.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(tid).classList.add('active'); btn.classList.add('active'); if(tid==='vat-def') renderDeferred(); if(tid==='vat-recon') renderRevRecon(); }
-    function fmt(n) { return n?Number(n).toLocaleString('en-US',{minimumFractionDigits:2}):'-'; }
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const analytics = getAnalytics(app);
 
-    // --- RENDERERS ---
-    function renderAll() {
-        // PP30 (WITH NEW COLS)
-        const t1=document.getElementById('tb-pp30'); t1.innerHTML=''; 
-        app.pp30.forEach((r,i)=>t1.innerHTML+=`<tr>
-            <td class="no-print"><button class="btn-del" onclick="delRow('pp30',${i})">x</button></td>
-            <td>${mo[r.m]||'-'}</td>
-            <td><input class="tbl-inp" value="${r.s}" onchange="upd('pp30',${i},'s',this.value)"></td>
-            <td><input class="tbl-inp" value="${r.ts}" onchange="upd('pp30',${i},'ts',this.value)"></td>
-            <td><input class="tbl-inp" value="${r.b}" onchange="upd('pp30',${i},'b',this.value)"></td>
-            <td><input class="tbl-inp" value="${r.tb}" onchange="upd('pp30',${i},'tb',this.value)"></td>
-            <td style="text-align:right;">${fmt(r.ts-r.tb)}</td>
-            <td><input type="date" class="tbl-inp center" value="${r.pd||''}" onchange="upd('pp30',${i},'pd',this.value)"></td>
-            <td><input class="tbl-inp center" value="${r.rcp||''}" onchange="upd('pp30',${i},'rcp',this.value)"></td>
-        </tr>`);
+        // --- Auth Functions --- //
         
-        renderWHT();
-        const t3=document.getElementById('tb-sso'); t3.innerHTML=''; app.ssoData.forEach((r,i)=>t3.innerHTML+=`<tr><td class="center">${mo[r.m]}</td><td><input class="tbl-inp" value="${r.emp}" onchange="upd('sso',${i},'emp',this.value)"></td><td><input class="tbl-inp" value="${r.wage}" onchange="upd('sso',${i},'wage',this.value)"></td><td><input class="tbl-inp" value="${r.d}" onchange="upd('sso',${i},'d',this.value)"></td><td><input class="tbl-inp" value="${r.c}" onchange="upd('sso',${i},'c',this.value)"></td><td style="text-align:right;">${fmt((r.d*1)+(r.c*1))}</td><td><input type="date" class="tbl-inp" value="${r.dt||''}" onchange="upd('sso',${i},'dt',this.value)"></td></tr>`);
-        renderRevRecon(); renderDeferred(); renderBank(); renderInputRecon(); renderCheck(); renderAssets(); calcCIT();
-    }
+        // 1. ตรวจสอบสถานะการล็อกอิน (ทำงานตลอดเวลา)
+        onAuthStateChanged(auth, (user) => {
+            const loginScreen = document.getElementById('login-screen');
+            const appContainer = document.getElementById('app-container');
+            const displayEmail = document.getElementById('display-email');
 
-    // --- UPDATERS ---
-    function upd(type, i, k, v) { 
-        if(type==='pp30') app.pp30[i][k]=(k==='pd'||k==='rcp')?v:Number(v);
-        if(type==='wht') app.whtData[curWHT][i][k]=(k==='date'?v:Number(v));
-        if(type==='sso') app.ssoData[i][k]=(k==='dt'?v:Number(v));
-        if(type==='kt20') app.kt20Data[i][k]=(k==='dt'?v:Number(v));
-        saveData(); renderAll();
-    }
-    function delRow(type, i) { if(type==='pp30')app.pp30.splice(i,1); if(type==='kt20')app.kt20Data.splice(i,1); saveData(); renderAll(); }
-    function addPP30Row(){ app.pp30.push({m:0,s:0,ts:0,b:0,tb:0, pd:'', rcp:''}); saveData(); renderAll(); }
+            if (user) {
+                // User is signed in
+                console.log("User Active:", user.email);
+                loginScreen.style.display = 'none';
+                appContainer.style.display = 'flex';
+                displayEmail.innerText = user.email; // โชว์อีเมลคนที่ล็อกอินอยู่
+            } else {
+                // User is signed out
+                loginScreen.style.display = 'flex';
+                appContainer.style.display = 'none';
+            }
+        });
 
-    // --- CIT CALC ---
-    function calcCIT() {
-        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => app.cit[k] = Number(document.getElementById('cit_'+k).value));
-        
-        let totalAdd = app.cit.add1 + app.cit.add2 + app.cit.add3;
-        let totalDed = app.cit.ded1 + app.cit.ded2 + app.cit.ded3;
-        let taxProfit = app.cit.net + totalAdd - totalDed;
-        let taxAmt = taxProfit > 0 ? taxProfit * (app.cit.rate/100) : 0;
-        let netPay = taxAmt - app.cit.wht - app.cit.half;
+        // 2. ฟังก์ชันล็อกอิน
+        window.doLogin = function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('login-msg');
+            const loader = document.getElementById('loader');
 
-        document.getElementById('cit_tax_profit').innerText = fmt(taxProfit);
-        document.getElementById('cit_amount').innerText = fmt(taxAmt);
-        document.getElementById('cit_net_pay').innerText = fmt(netPay);
-        document.getElementById('cit_net_pay').style.color = netPay > 0 ? 'red' : 'green';
-        saveData();
-    }
+            if(!email || !password) {
+                msg.style.display = 'block';
+                msg.innerText = "กรุณากรอกอีเมลและรหัสผ่าน";
+                return;
+            }
 
-    // --- HELPERS (Keep Existing) ---
-    function renderWHT(){ const tb=document.getElementById('tb-wht'); tb.innerHTML=''; app.whtData[curWHT].forEach((r,i)=> tb.innerHTML+=`<tr><td class="center">${mo[r.month]}</td><td><input class="tbl-inp" value="${r.income}" onchange="upd('wht',${i},'income',this.value)"></td><td><input class="tbl-inp" value="${r.tax}" onchange="upd('wht',${i},'tax',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.date||''}" onchange="upd('wht',${i},'date',this.value)"></td></tr>`); }
-    function setWHTTab(el,t){ curWHT=t; document.querySelectorAll('#page-wht .tab-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderWHT(); }
-    function renderAssets() { const tb=document.getElementById('tb-assets'); tb.innerHTML=''; let sCost=0, sBF=0, sCY=0, sNBV=0; app.assets.forEach((a, i) => { let cost = Number(a.cost)||0; let rate = Number(a.rate)||0; let bf = Number(a.bf)||0; let cy = 0; if(a.date) { let d = new Date(a.date); let now = new Date(); let days = 365; if(d.getFullYear() === now.getFullYear()) { days = 366 - Math.floor((d - new Date(d.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)); } if(days > 365) days=365; cy = (cost * (rate/100) * days) / 365; if((bf+cy) > cost - 1) cy = (cost-1) - bf; if(cy < 0) cy = 0; } let cf = bf + cy; let nbv = cost - cf; sCost+=cost; sBF+=bf; sCY+=cy; sNBV+=nbv; tb.innerHTML += `<tr><td class="no-print"><button class="btn-del" onclick="app.assets.splice(${i},1);saveData();renderAssets()">x</button></td><td><input class="tbl-inp" style="text-align:left;" value="${a.name}" onchange="updAsset(${i},'name',this.value)"></td><td><input type="date" class="tbl-inp" value="${a.date}" onchange="updAsset(${i},'date',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.cost}" onchange="updAsset(${i},'cost',this.value)"></td><td><input type="number" class="tbl-inp center" value="${a.rate}" onchange="updAsset(${i},'rate',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.bf}" onchange="updAsset(${i},'bf',this.value)"></td><td class="text-right">${fmt(cy)}</td><td class="text-right">${fmt(cf)}</td><td class="text-right font-bold">${fmt(nbv)}</td></tr>`; }); document.getElementById('tf-assets').innerHTML = `<tr><td colspan="3" class="center">รวม</td><td class="text-right">${fmt(sCost)}</td><td></td><td class="text-right">${fmt(sBF)}</td><td class="text-right">${fmt(sCY)}</td><td class="text-right">${fmt(sBF+sCY)}</td><td class="text-right">${fmt(sNBV)}</td></tr>`; }
-    function addAsset() { app.assets.push({name:"ทรัพย์สินใหม่", date:"", cost:0, rate:20, bf:0}); saveData(); renderAssets(); }
-    function updAsset(i,k,v) { app.assets[i][k] = (k==='name'||k==='date')?v:Number(v); saveData(); renderAssets(); }
-    function renderRevRecon() { const tb=document.getElementById('tb-rev-recon'); tb.innerHTML=''; let tot={pp:0,g1:0,g2:0,g3:0,gt:0,df:0}; mo.forEach((m, i)=>{ let pp=app.pp30.find(x=>x.m==i)?.s||0, g=app.revGL[i]||{c1:0,c2:0,c3:0}, gt=(g.c1||0)+(g.c2||0)+(g.c3||0), df=pp-gt; tot.pp+=pp; tot.g1+=(g.c1||0); tot.g2+=(g.c2||0); tot.g3+=(g.c3||0); tot.gt+=gt; tot.df+=df; tb.innerHTML+=`<tr><td class="center">${m}</td><td class="text-right">${fmt(pp)}</td><td><input type="number" class="tbl-inp" value="${g.c1||0}" onchange="updRev(${i},'c1',this.value)"></td><td><input type="number" class="tbl-inp" value="${g.c2||0}" onchange="updRev(${i},'c2',this.value)"></td><td><input type="number" class="tbl-inp" value="${g.c3||0}" onchange="updRev(${i},'c3',this.value)"></td><td class="text-right font-bold">${fmt(gt)}</td><td class="text-right font-bold ${Math.abs(df)>1?'diff-err':'diff-ok'}">${fmt(df)}</td><td><input class="tbl-inp" value="${g.rem||''}" onchange="updRev(${i},'rem',this.value)"></td></tr>`; }); document.getElementById('tf-rev-recon').innerHTML = `<tr><td class="center">รวม</td><td class="text-right">${fmt(tot.pp)}</td><td class="text-right">${fmt(tot.g1)}</td><td class="text-right">${fmt(tot.g2)}</td><td class="text-right">${fmt(tot.g3)}</td><td class="text-right">${fmt(tot.gt)}</td><td class="text-right">${fmt(tot.df)}</td><td></td></tr>`; }
-    function updRev(i, k, v) { if(!app.revGL[i]) app.revGL[i]={c1:0,c2:0,c3:0}; app.revGL[i][k]=(k==='rem')?v:Number(v); saveData(); renderRevRecon(); }
-    function renderDeferred() { const lst=document.getElementById('def-list'); lst.innerHTML=''; const term=document.getElementById('searchDef').value.toLowerCase(); for(let c in app.defLedger) { if(c.toLowerCase().includes(term)) { let sum=app.defLedger[c].reduce((a,b)=>a+(b.cr-b.dr),0); lst.innerHTML+=`<div class="cust-item" onclick="showDef('${c.replace(/'/g,"\\'")}')"><strong>${c}</strong><br><span style="font-size:0.8em; color:${sum!=0?'red':'green'}">คงเหลือ: ${fmt(sum)}</span></div>`; } } }
-    function showDef(n) { document.getElementById('def-title').innerText=n; let h=`<table width="100%"><thead><tr><th>วันที่</th><th>เอกสาร</th><th>รายการ</th><th>Dr</th><th>Cr</th><th>คงเหลือ</th></tr></thead><tbody>`, bal=0; app.defLedger[n].forEach(r=>{ bal+=(r.cr-r.dr); h+=`<tr><td>${r.d}</td><td>${r.doc}</td><td>${r.des}</td><td class="text-right">${fmt(r.dr)}</td><td class="text-right">${fmt(r.cr)}</td><td class="text-right font-bold">${fmt(bal)}</td></tr>`; }); document.getElementById('def-detail').innerHTML=h+`</tbody></table>`; }
-    function clearDef() { if(confirm('ล้าง Deferred?')) { app.defLedger={}; saveData(); renderDeferred(); document.getElementById('def-detail').innerHTML=''; } }
-    function impUniv(el, t) { const f=el.files[0]; if(!f)return; const r=new FileReader(); let enc='windows-874'; if(t.includes('Check')||t.includes('Rep')) enc='utf-8'; r.onload=e=>{ let wb; try{wb=XLSX.read(new TextDecoder(enc).decode(e.target.result),{type:'string'});}catch(x){wb=XLSX.read(e.target.result,{type:'array'});} const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}); let hI=-1; for(let i=0;i<Math.min(data.length,20);i++){let s=JSON.stringify(data[i]); if((s.includes("วันที่")&&(s.includes("เอกสาร")||s.includes("ใบสำคัญ")||s.includes("Voucher")))||(t.includes('def')&&s.includes('เดบิต'))){hI=i;break;}} if(hI<0){alert("ไม่พบหัวตาราง");return;} let h=data[hI], cDt=h.indexOf("วันที่"), cDoc=h.findIndex(c=>String(c).includes("เอกสาร")||String(c).includes("ใบสำคัญ")||String(c).includes("ใบกำกับ")), cDes=h.indexOf("คำอธิบาย")||h.indexOf("รายการ")||h.indexOf("ชื่อผู้ขาย"), cDr=h.indexOf("เดบิต"), cCr=h.indexOf("เครดิต"), cAmt=h.findIndex(c=>String(c).includes("จำนวนเงิน")||String(c).includes("ภาษี")); let items=[]; for(let i=hI+1; i<data.length; i++){ let r=data[i]; if(!r[cDt])continue; let d=r[cDt], doc=r[cDoc]||"", des=r[cDes]||""; if(t==='revGL'){ let cr=pNum(r[cCr]), dr=pNum(r[cDr]); if(cr-dr!=0) items.push({d,doc,des,amt:cr-dr}); } else if(t==='def'){ let dr=pNum(r[cDr]), cr=pNum(r[cCr]); if(dr||cr){ let n=String(des).replace(/^ขาย-|รับเงินมัดจำ-/g,'').trim(); if(!app.defLedger[n])app.defLedger[n]=[]; if(!app.defLedger[n].some(x=>x.doc==doc&&x.dr==dr))app.defLedger[n].push({d,doc,des,dr,cr}); } } else if(t==='bankGL'){ let dr=pNum(r[cDr]), cr=pNum(r[cCr]); if(dr||cr) items.push({d,doc,des,val:dr>0?dr:cr*-1,chk:false}); } else if(t==='vatGL'){ let dr=pNum(r[cDr]), cr=pNum(r[cCr]); if(dr-cr!=0) items.push({d,doc,des,val:dr-cr}); } else if(t==='vatRep'||t==='vatCheck'){ let val=pNum(r[cAmt]), bVal=pNum(r[cAmt-1]); if(val!=0) items.push({d,doc,des,val,base:bVal,chk:true}); } } if(t==='revGL'){ app.revGL=Array(12).fill({c1:0,c2:0,c3:0}); items.forEach(it=>{ let m=parseDate(it.d).getMonth(); if(m>=0&&m<12){ let c=app.revGL[m]; app.revGL[m]={c1:(c.c1||0)+it.amt,c2:c.c2,c3:c.c3}; } }); renderRevRecon(); } else if(t==='def') renderDeferred(); else if(t==='bankGL'){ app.bankData.gl=items; updateBankUI(); } else if(t==='vatGL'){ app.inputRecon.gl=items; runInputVatRecon(); } else if(t==='vatRep'){ app.inputRecon.rep=items; runInputVatRecon(); } else if(t==='vatCheck'){ app.inputCheck=items; renderCheck(); } saveData(); alert(`Imported ${items.length} items`); el.value=''; }; r.readAsArrayBuffer(f); }
-    function pNum(v){ return parseFloat(String(v||0).replace(/,/g,''))||0; }
-    function parseDate(s){ if(!s)return new Date(); if(s.includes('/')){let p=s.split('/');return new Date(p[2],p[1]-1,p[0]);} return new Date(s); }
-    function impStmt(el){ const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ const wb=XLSX.read(e.target.result,{type:'binary'}); const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}); let cW=-1, cD=-1, cDt=-1; for(let i=0;i<Math.min(data.length,20);i++){ data[i].forEach((c,x)=>{ let s=String(c); if(s.includes('ถอน'))cW=x; if(s.includes('ฝาก'))cD=x; if(s.includes('วัน'))cDt=x; }); if(cW>-1)break; } if(cW<0){alert('Error Header');return;} let items=[]; data.forEach((r,i)=>{ if(i<1||!r[cDt])return; let d=r[cDt]; if(typeof d==='number')d=new Date((d-25569)*86400*1000).toLocaleDateString('en-GB'); let w=pNum(r[cW]), dep=pNum(r[cD]); if(w||dep) items.push({d,des:r[cDt+1]||"",val:dep>0?dep:w*-1,chk:false}); }); app.bankData.stmt=items; updateBankUI(); saveData(); alert('Stmt Imported'); el.value=''; }; r.readAsBinaryString(f); }
-    function runBankRecon(){ app.bankData.gl.forEach(g=>g.chk=false); app.bankData.stmt.forEach(s=>s.chk=false); app.bankData.gl.forEach(g=>{ let m=app.bankData.stmt.find(s=>!s.chk&&Math.abs(s.val-g.val)<0.05); if(m){g.chk=true; m.chk=true;} }); updateBankUI(); saveData(); alert("Done"); }
-    function updateBankUI(){ document.getElementById('bank-stat').innerText=`GL:${app.bankData.gl.length}|Stmt:${app.bankData.stmt.length}`; const t1=document.getElementById('tb-bank-gl'), t2=document.getElementById('tb-bank-stmt'); t1.innerHTML=''; t2.innerHTML=''; app.bankData.gl.filter(x=>!x.chk).forEach(x=>t1.innerHTML+=`<tr><td>${x.d}</td><td>${x.doc}</td><td class="text-right ${x.val>0?'diff-ok':'diff-err'}">${fmt(x.val)}</td></tr>`); app.bankData.stmt.filter(x=>!x.chk).forEach(x=>t2.innerHTML+=`<tr><td>${x.d}</td><td>${x.des}</td><td class="text-right ${x.val>0?'diff-ok':'diff-err'}">${fmt(x.val)}</td></tr>`); }
-    function runInputVatRecon(){ const tb=document.getElementById('tb-input-recon'); tb.innerHTML=''; let mRep=new Map(), mGl=new Map(); app.inputRecon.rep.forEach(x=>{let k=clean(x.doc);mRep.set(k,(mRep.get(k)||0)+x.val);}); app.inputRecon.gl.forEach(x=>{let k=clean(x.doc);mGl.set(k,(mGl.get(k)||0)+x.val);}); let keys=new Set([...mRep.keys(),...mGl.keys()]); keys.forEach(k=>{let r=mRep.get(k)||0, g=mGl.get(k)||0, d=r-g; let st=Math.abs(d)<0.05?'<i class="fas fa-check text-green-600"></i>':'<i class="fas fa-times text-red-600"></i>'; tb.innerHTML+=`<tr><td class="center">${st}</td><td>${k}</td><td>-</td><td class="text-right">${fmt(r)}</td><td class="text-right">${fmt(g)}</td><td class="text-right font-bold ${d!=0?'diff-err':''}">${fmt(d)}</td></tr>`;}); }
-    function clean(s){return String(s).replace(/[^0-9a-zA-Z]/g,'').toUpperCase();}
-    function renderCheck(){ const tb=document.getElementById('tb-check'); tb.innerHTML=''; let chk=0, tot=0; app.inputCheck.forEach((r,i)=>{ if(r.chk)chk+=r.val; tot+=r.val; if(r.hide)return; tb.innerHTML+=`<tr class="${r.chk?'row-checked':'row-unchecked'}"><td class="no-print center"><input type="checkbox" ${r.chk?'checked':''} onclick="togCheck(${i})"></td><td>${r.d}</td><td>${r.doc}</td><td>${r.des}</td><td class="text-right">${fmt(r.base)}</td><td class="text-right font-bold">${fmt(r.val)}</td><td><input class="tbl-inp" value="${r.rem||''}" onchange="app.inputCheck[${i}].rem=this.value;saveData()"></td></tr>`; }); document.getElementById('check-stat').innerText=`เลือกยื่น: ${fmt(chk)} / ${fmt(tot)}`; }
-    function togCheck(i){ app.inputCheck[i].chk=!app.inputCheck[i].chk; renderCheck(); saveData(); }
-    function toggleAllCheck(el){ app.inputCheck.forEach(x=>x.chk=el.checked); renderCheck(); saveData(); }
-    function searchCheck(e){ let k=e.target.value.toLowerCase(); app.inputCheck.forEach(x=>x.hide=!(x.doc.toLowerCase().includes(k)||x.des.toLowerCase().includes(k))); renderCheck(); }
-    function addKT20(){ app.kt20Data.push({y:new Date().getFullYear()+543,emp:0,w:0,pay:0}); saveData(); renderAll(); }
-    function resetSystem(){ if(confirm('Reset?')) { localStorage.removeItem('maudit_v8'); location.reload(); } }
-    function backupData(){ const a=document.createElement('a'); a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(app)); a.download='M-Audit_Backup.json'; a.click(); }
-    function restoreData(el){ const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{app=JSON.parse(e.target.result); saveData(); location.reload();}; r.readAsText(f); }
-</script>
+            // UI Loading
+            msg.style.display = 'none';
+            loader.style.display = 'block';
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Success (onAuthStateChanged จะทำงานต่อเอง)
+                    loader.style.display = 'none';
+                })
+                .catch((error) => {
+                    loader.style.display = 'none';
+                    msg.style.display = 'block';
+                    console.error(error.code);
+                    
+                    // แปล Error เป็นภาษาไทย
+                    if (error.code === 'auth/invalid-email') msg.innerText = "รูปแบบอีเมลไม่ถูกต้อง";
+                    else if (error.code === 'auth/user-not-found') msg.innerText = "ไม่พบผู้ใช้งานนี้";
+                    else if (error.code === 'auth/wrong-password') msg.innerText = "รหัสผ่านไม่ถูกต้อง";
+                    else if (error.code === 'auth/too-many-requests') msg.innerText = "ลองบ่อยเกินไป กรุณารอสักครู่";
+                    else msg.innerText = "เข้าสู่ระบบไม่สำเร็จ: " + error.code;
+                });
+        }
+
+        // 3. ฟังก์ชันออกจากระบบ
+        window.doLogout = function() {
+            signOut(auth).then(() => {
+                // Sign-out successful.
+                console.log("Signed out");
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
+    </script>
+
 </body>
 </html>

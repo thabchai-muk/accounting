@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax & Other Audit - M Audit System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* THEME ORIGINAL */
+        :root { --primary: #1e3a8a; --accent: #3b82f6; --bg: #f8fafc; --warn: #f59e0b; --danger: #ef4444; --success: #10b981; }
+        body { font-family: 'Sarabun', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; font-size: 14px; color: #334155; }
+        
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .brand { padding: 25px; text-align: center; background: rgba(0,0,0,0.2); }
+        .brand h3 { margin: 0; font-weight: 700; }
+        .menu-item { padding: 10px 25px; cursor: pointer; display: flex; align-items: center; border-left: 4px solid transparent; color: #dbeafe; text-decoration: none; transition: 0.2s; }
+        .menu-item:hover { background: rgba(255,255,255,0.1); }
+        .menu-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--accent); color: white; font-weight: 600; }
+        .menu-group { font-size: 0.75rem; color: #93c5fd; padding: 15px 25px 5px; text-transform: uppercase; font-weight: bold; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .menu-item i { width: 25px; font-size: 1.1em; text-align: center; margin-right: 10px; }
+
+        /* CONTENT */
+        .main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; height: 100%; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        .header-row h3 { margin: 0; color: var(--primary); }
+        .page-section { display: none; height: 100%; flex-direction: column; }
+        .page-section.active { display: flex; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* UI ELEMENTS */
+        .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; gap: 2px; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #f8fafc; font-weight: 600; color: #64748b; border-radius: 8px 8px 0 0; transition: 0.2s; }
+        .tab-btn:hover { background: #e2e8f0; }
+        .tab-btn.active { background: white; color: var(--primary); border-top: 3px solid var(--accent); border-bottom: 2px solid white; margin-bottom: -2px; }
+        .tab-content { display: none; height: 100%; flex-direction: column; }
+        .tab-content.active { display: flex; }
+
+        .table-container { flex: 1; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; min-width: 800px; }
+        th { background: #f8fafc; padding: 10px; position: sticky; top: 0; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; z-index: 10; white-space: nowrap; font-weight: 600; }
+        td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
+        input.tbl-inp { width: 100%; background: transparent; border: 1px solid transparent; text-align: right; font-family: 'Sarabun'; padding: 4px; border-radius: 4px; font-size: 0.9em; }
+        input.tbl-inp:focus { border: 1px solid #cbd5e1; background: white; outline: none; }
+        .center { text-align: center !important; }
+        .text-right { text-align: right !important; }
+        
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; font-family: 'Sarabun'; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-add { background: var(--accent); }
+        .btn-save { background: var(--warn); width: 100%; justify-content: center; padding: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px;}
+        .btn-import { background: #8b5cf6; }
+        .btn-excel { background: var(--success); }
+        .btn-del { background: var(--danger); padding: 4px 8px; font-size: 0.7em; }
+        .btn-gray { background: #64748b; }
+        .btn-back { background: rgba(255,255,255,0.2); width: 100%; justify-content: center; margin-top: 10px; }
+        .btn-back:hover { background: rgba(255,255,255,0.3); }
+
+        /* DEFERRED GRID */
+        .bank-grid { display: grid; grid-template-columns: 1fr 2.5fr; gap: 20px; height: 100%; min-height: 400px; }
+        .bank-col { display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white; }
+        .cust-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .cust-item:hover { background: #f0f9ff; }
+        .cust-item.active { background: #e0f2fe; border-left: 4px solid var(--primary); }
+        
+        /* CIT */
+        .cit-section { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; background: #fff; }
+        .cit-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.95em; }
+        .cit-row label { flex: 1; color: #475569; }
+        .cit-row input { width: 120px; text-align: right; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: 'Sarabun'; }
+        .cit-head { font-weight: bold; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
+        .font-bold { font-weight: bold; }
+
+        .mb-2 { margin-bottom: 10px; }
+
+        @media print { .sidebar, .no-print { display: none !important; } .card { border: none; box-shadow: none; } }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="brand">
+        <h3><i class="fas fa-chart-line"></i> M-Audit Pro</h3>
+        <small>Tax & Other Module</small>
+    </div>
+    
+    <div class="menu-group">Tax & Revenue</div>
+    <div class="menu-item active" onclick="navTo('page-vat', this)"><i class="fas fa-percent"></i> ภาษีมูลค่าเพิ่ม (ภ.พ.30)</div>
+    <div class="menu-item" onclick="navTo('page-wht', this)"><i class="fas fa-file-invoice-dollar"></i> หัก ณ ที่จ่าย (WHT)</div>
+    
+    <div class="menu-group">Other WP</div>
+    <div class="menu-item" onclick="navTo('page-sso', this)"><i class="fas fa-users"></i> ประกันสังคม (สปส.)</div>
+    <div class="menu-item" onclick="navTo('page-assets', this)"><i class="fas fa-building"></i> ทะเบียนทรัพย์สิน</div>
+    <div class="menu-item" onclick="navTo('page-oca', this)"><i class="fas fa-wallet"></i> สินทรัพย์หมุนเวียนอื่น</div>
+    <div class="menu-item" onclick="navTo('page-ocl', this)"><i class="fas fa-hand-holding-usd"></i> หนี้สินหมุนเวียนอื่น</div>
+    
+    <div class="menu-group">Closing</div>
+    <div class="menu-item" onclick="navTo('page-cit', this)"><i class="fas fa-balance-scale"></i> ภ.ง.ด.50 (CIT)</div>
+
+    <div style="padding: 20px; margin-top: auto;">
+        <button class="btn btn-save" onclick="manualSave()"><i class="fas fa-save"></i> บันทึกข้อมูล</button>
+        
+        <a href="../index.html" class="menu-item btn-back"><i class="fas fa-arrow-left"></i> กลับหน้าหลัก</a>
+
+        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
+            <button class="btn btn-import" style="width:100%; justify-content:center;" onclick="backupData()"><i class="fas fa-download"></i> สำรองข้อมูล</button>
+            <input type="file" id="resFile" style="display:none;" onchange="restoreData(this)">
+            <button class="btn btn-gray" style="margin-top:5px; width:100%; justify-content:center;" onclick="document.getElementById('resFile').click()"><i class="fas fa-upload"></i> เรียกคืนข้อมูล</button>
+        </div>
+    </div>
+</nav>
+
+<main class="main">
+    <div id="saveStatus" style="position:fixed; top:20px; right:20px; background:#10b981; color:white; padding:5px 15px; border-radius:20px; opacity:0; transition:0.5s; z-index:999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"><i class="fas fa-check-circle"></i> บันทึกแล้ว</div>
+
+    <div id="page-vat" class="page-section active">
+        <div class="card">
+            <div class="header-row"><h3>ภาษีมูลค่าเพิ่ม & รายได้</h3></div>
+            <div class="tabs no-print">
+                <button class="tab-btn active" onclick="setTab(this, 'vat-pp30')">1. ยื่นแบบ ภ.พ.30</button>
+                <button class="tab-btn" onclick="setTab(this, 'vat-recon')">2. พิสูจน์ยอดรายได้ (Recon)</button>
+                <button class="tab-btn" onclick="setTab(this, 'vat-def')">3. ทะเบียนรับล่วงหน้า (Deferred)</button>
+            </div>
+            
+            <div id="vat-pp30" class="tab-content active">
+                <div class="no-print mb-2"><button class="btn btn-add" onclick="addPP30Row()">+ เพิ่มแถว (ยื่นเพิ่มเติม)</button></div>
+                <div class="table-container" style="flex:none; height:400px;">
+                    <table>
+                        <thead><tr><th class="no-print">Del</th><th>เดือน / ครั้งที่</th><th>ยอดขาย</th><th>ภาษีขาย</th><th>ยอดซื้อ</th><th>ภาษีซื้อ</th><th>ชำระ/(คืน)</th><th style="background:#f0fdf4;">วันที่ชำระ</th><th style="background:#f0fdf4;">เลขที่ใบเสร็จ</th></tr></thead>
+                        <tbody id="tb-pp30"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px;"><label><strong>Audit Note:</strong></label><textarea id="vat-note" style="width:100%; height:80px; border:1px solid #ccc; border-radius:4px; padding:10px; margin-top:5px;" onchange="saveVatNote()" placeholder="บันทึกข้อสังเกต..."></textarea></div>
+            </div>
+
+            <div id="vat-recon" class="tab-content">
+                <div class="no-print mb-2 text-right"><input type="file" id="f-rev-gl" hidden onchange="impUniv(this, 'revGL')"><button class="btn btn-import" onclick="document.getElementById('f-rev-gl').click()"><i class="fas fa-file-import"></i> Import GL รายได้</button></div>
+                <div class="table-container"><table><thead><tr><th>เดือน</th><th>ยอดขาย (ภ.พ.30)</th><th>(+) รับล่วงหน้า (สิ้นงวด)</th><th>(-) รับล่วงหน้า (ยกมา)</th><th>(=) รายได้ทางบัญชี</th><th style="background:#eff6ff;">ยอด GL</th><th>ผลต่าง</th></tr></thead><tbody id="tb-rev-recon"></tbody></table></div>
+            </div>
+
+            <div id="vat-def" class="tab-content">
+                <div class="no-print mb-2" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:10px;">
+                         <input type="text" id="searchDef" placeholder="🔍 ค้นหาลูกหนี้..." style="padding:5px; border:1px solid #ccc; border-radius:4px;" onkeyup="renderDeferred()">
+                         <button class="btn btn-excel" onclick="exportDeferred()"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    </div>
+                    <div>
+                        <button class="btn" style="background:#64748b;" onclick="clearDef()">ล้าง</button>
+                        <input type="file" id="f-def" hidden onchange="impUniv(this, 'def')">
+                        <button class="btn btn-import" onclick="document.getElementById('f-def').click()">Import Excel/CSV</button>
+                        <button class="btn btn-add" onclick="addDefManual()">+ เพิ่มรายชื่อ</button>
+                    </div>
+                </div>
+                <div class="bank-grid">
+                    <div class="bank-col" id="def-list" style="overflow-y:auto;"></div>
+                    <div class="bank-col" style="padding:15px; overflow-y:auto;">
+                        <h3 id="def-title" style="margin:0 0 10px 0; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">กรุณาเลือกรายชื่อ</h3>
+                        
+                        <div id="def-bf-box" style="display:none; background:#fffbeb; padding:10px; margin-bottom:10px; border:1px solid #fcd34d; border-radius:4px; align-items:center; gap:10px;">
+                            <label style="font-weight:bold; color:#92400e;">ยอดยกมา (B/F):</label>
+                            <input type="number" id="inp-def-bf" class="tbl-inp" style="width:150px; background:white; text-align:right; border:1px solid #ccc;" placeholder="0.00" onchange="saveDefBF()">
+                            <small style="color:#666;">(ยอดคงเหลือจากปีก่อน)</small>
+                        </div>
+
+                        <div id="def-detail"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-wht" class="page-section">
+        <div class="card full-height">
+            <div class="header-row"><h3>หัก ณ ที่จ่าย (WHT)</h3><button class="btn btn-excel" onclick="exportToExcel('tbl-wht', 'WHT')">Export</button></div>
+            <div class="tabs no-print">
+                <button class="tab-btn active" onclick="setWHTTab(this, 'pnd1')">ภ.ง.ด.1</button>
+                <button class="tab-btn" onclick="setWHTTab(this, 'pnd3')">ภ.ง.ด.3</button>
+                <button class="tab-btn" onclick="setWHTTab(this, 'pnd53')">ภ.ง.ด.53</button>
+            </div>
+            <div class="table-container"><table id="tbl-wht"><thead><tr style="background:#f0f9ff;"><th>เดือน</th><th id="th-wht-emp">คน</th><th>ยอดเงินได้</th><th>ภาษี</th><th>ใบเสร็จ</th><th>วันที่ยื่น</th><th>สถานะ</th></tr></thead><tbody id="tb-wht"></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="page-sso" class="page-section">
+        <div class="card">
+            <div class="header-row"><h3>ประกันสังคม (สปส.1-10)</h3><div class="no-print"><input type="file" id="f-sso" hidden onchange="impUniv(this, 'sso')"><button class="btn btn-import" onclick="document.getElementById('f-sso').click()">Import CSV</button></div></div>
+            <div class="table-container" id="tb-sso-wrap"><table><thead><tr style="background:#e0f2fe;"><th>เดือน</th><th>คน</th><th>ค่าจ้างรวม</th><th>หัก พนง.</th><th>นายจ้างสมทบ</th><th>รวมนำส่ง</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-sso"></tbody></table></div>
+        </div>
+        <div class="card mt-2"><div class="header-row"><h3>กท.20 (กองทุนเงินทดแทน)</h3><button class="btn btn-add" onclick="addKT20()">+ เพิ่มรายการ</button></div><div class="table-container"><table><thead><tr style="background:#ecfccb;"><th>Del</th><th>ปี</th><th>คน</th><th>ค่าจ้างทั้งปี</th><th>เงินสมทบ</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-kt20"></tbody></table></div></div>
+    </div>
+
+    <div id="page-assets" class="page-section"><div class="card"><div class="header-row"><h3>ทะเบียนทรัพย์สิน (Fixed Assets)</h3><div class="no-print"><input type="file" id="f-asset" hidden onchange="impUniv(this, 'asset')"><button class="btn btn-import" onclick="document.getElementById('f-asset').click()">Import</button> <button class="btn btn-add" onclick="addAsset()">+ เพิ่ม</button> <button class="btn btn-excel" onclick="exportToExcel('tb-asset-wrap', 'Assets')">Export</button></div></div><div class="table-container" id="tb-asset-wrap"><table><thead><tr style="background:#ecfdf5;"><th>Del</th><th>ชื่อทรัพย์สิน</th><th>วันที่ซื้อ</th><th>ราคาทุน</th><th>Rate(%)</th><th>ค่าเสื่อมสะสม (ยกมา)</th><th>ค่าเสื่อมปีนี้</th><th>สะสมยกไป</th><th>NBV</th></tr></thead><tbody id="tb-assets"></tbody></table></div></div></div>
+    
+    <div id="page-oca" class="page-section"><div class="card"><div class="header-row"><h3>สินทรัพย์หมุนเวียนอื่น (Other Current Assets)</h3><div class="no-print"><button class="btn btn-add" onclick="addOC(1)">+ เพิ่มรายการ</button></div></div><div class="table-container" id="tb-oca-wrap"><table><thead><tr style="background:#cffafe;"><th>Del</th><th>วันที่</th><th>รายการ</th><th>จำนวนเงิน</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-oca"></tbody></table></div></div></div>
+    
+    <div id="page-ocl" class="page-section"><div class="card"><div class="header-row"><h3>หนี้สินหมุนเวียนอื่น (Other Current Liabilities)</h3><div class="no-print"><button class="btn btn-add" onclick="addOC(2)">+ เพิ่มรายการ</button></div></div><div class="table-container" id="tb-ocl-wrap"><table><thead><tr style="background:#fae8ff;"><th>Del</th><th>วันที่</th><th>รายการ</th><th>จำนวนเงิน</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-ocl"></tbody></table></div></div></div>
+
+    <div id="page-cit" class="page-section"><div class="card h-auto"><div class="header-row"><h3>ภ.ง.ด.50 Calculation</h3></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="cit-section"><div class="cit-head">1. ปรับปรุงกำไรสุทธิ</div><div class="cit-row"><label>กำไร(ขาดทุน) ทางบัญชี</label><input type="number" id="cit_net" onchange="calcCIT()"></div><div class="cit-head">บวกกลับ (รายจ่ายต้องห้าม)</div><div class="cit-row"><label>รายจ่ายต้องห้าม</label><input type="number" id="cit_add1" onchange="calcCIT()"></div><div class="cit-row"><label>ค่ารับรองส่วนเกิน</label><input type="number" id="cit_add2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="number" id="cit_add3" onchange="calcCIT()"></div><div class="cit-head">หักออก (รายได้ยกเว้น/หักได้เพิ่ม)</div><div class="cit-row"><label>รายได้ยกเว้นภาษี</label><input type="number" id="cit_ded1" onchange="calcCIT()"></div><div class="cit-row"><label>หักได้เพิ่ม (2 เท่า ฯลฯ)</label><input type="number" id="cit_ded2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="number" id="cit_ded3" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>กำไร(ขาดทุน) ทางภาษี</label><span id="cit_tax_profit">0.00</span></div></div><div class="cit-section"><div class="cit-head">2. คำนวณภาษี</div><div class="cit-row"><label>Tax Rate (%)</label><input type="number" id="cit_rate" value="20" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีที่ต้องชำระ (Total Tax)</label><span id="cit_amount" class="font-bold">0.00</span></div><div class="cit-head">เครดิตภาษี</div><div class="cit-row"><label>หัก ณ ที่จ่าย (WHT)</label><input type="number" id="cit_wht" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีครึ่งปี (ภ.ง.ด.51)</label><input type="number" id="cit_half" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>ภาษีชำระเพิ่ม/(ชำระเกิน)</label><span id="cit_net_pay" style="font-size:1.2em;">0.00</span></div></div></div></div></div>
+
+</main>
+
+<script>
+    // --- DATA & INIT ---
+    let app = { pp30:[], whtData:{pnd1:[],pnd3:[],pnd53:[]}, ssoData:[], kt20Data:[], assets:[], oca:[], ocl:[], defLedger:{}, revRecon:Array(12).fill({def_end:0,def_bf:0,gl:0}), cit:{net:0,add1:0,add2:0,add3:0,ded1:0,ded2:0,ded3:0,rate:20,wht:0,half:0}, vatNote:"" };
+    const mo = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+    let curWHT = 'pnd1', curDefCust = null;
+
+    window.onload = () => {
+        const d = localStorage.getItem('maudit_v12'); 
+        if(d) {
+            try { app = {...app, ...JSON.parse(d)}; } catch(e) { console.error("Data Load Error", e); }
+        }
+        if(!app.pp30.length) for(let i=0;i<12;i++) app.pp30.push({m:mo[i],s:0,ts:0,b:0,tb:0,pd:'',rcp:''});
+        ['pnd1','pnd3','pnd53'].forEach(k => { if(!app.whtData[k] || app.whtData[k].length===0) { app.whtData[k] = []; for(let i=0;i<12;i++) app.whtData[k].push({month:i, income:0, tax:0, rcpNo:'', fileDate:'', status:'รอ'}); } });
+        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => { const el = document.getElementById('cit_'+k); if(el) el.value = app.cit[k] || 0; });
+        document.getElementById('vat-note').value = app.vatNote || "";
+        renderAll();
+    }
+    
+    // --- CORE FUNC ---
+    function saveData() { 
+        app.vatNote = document.getElementById('vat-note').value; 
+        localStorage.setItem('maudit_v12', JSON.stringify(app)); 
+        const s=document.getElementById('saveStatus'); s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1000); 
+    }
+    function manualSave() { saveData(); alert("บันทึกข้อมูลเรียบร้อย"); }
+    function navTo(pid, el) { document.querySelectorAll('.page-section').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active')); document.getElementById(pid).classList.add('active'); el.classList.add('active'); if(pid==='page-vat') renderDeferred(); if(pid==='page-wht') renderWHT(); }
+    function setTab(btn, tid) { const p = btn.closest('.card'); p.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(tid).classList.add('active'); btn.classList.add('active'); if(tid==='vat-def') renderDeferred(); }
+    function fmt(n) { return n?Number(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}):'-'; }
+
+    // --- RENDERERS ---
+    function renderAll() { renderPP30(); renderWHT(); renderRevRecon(); renderDeferred(); renderSSO(); renderAssets(); renderOC(); calcCIT(); }
+
+    function renderPP30() {
+        const t=document.getElementById('tb-pp30'); t.innerHTML=''; 
+        app.pp30.forEach((r,i)=>t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('pp30',${i})">x</button></td><td><input class="tbl-inp center" value="${r.m}" onchange="upd('pp30',${i},'m',this.value)"></td><td><input class="tbl-inp" value="${r.s}" onchange="upd('pp30',${i},'s',this.value)"></td><td><input class="tbl-inp" value="${r.ts}" onchange="upd('pp30',${i},'ts',this.value)"></td><td><input class="tbl-inp" value="${r.b}" onchange="upd('pp30',${i},'b',this.value)"></td><td><input class="tbl-inp" value="${r.tb}" onchange="upd('pp30',${i},'tb',this.value)"></td><td style="text-align:right;">${fmt(r.ts-r.tb)}</td><td><input type="date" class="tbl-inp center" value="${r.pd||''}" onchange="upd('pp30',${i},'pd',this.value)"></td><td><input class="tbl-inp center" value="${r.rcp||''}" onchange="upd('pp30',${i},'rcp',this.value)"></td></tr>`);
+    }
+    
+    // --- DEFERRED ---
+    function renderDeferred() {
+        const lst=document.getElementById('def-list'); lst.innerHTML='';
+        const term=document.getElementById('searchDef').value.toLowerCase();
+        for(let c in app.defLedger) {
+            if(c.toLowerCase().includes(term)) {
+                let d = app.defLedger[c];
+                let mv = d.txns.reduce((a,b)=>a+(b.cr-b.dr),0);
+                let total = (d.bf || 0) + mv;
+                let activeClass = (curDefCust === c) ? 'active' : '';
+                lst.innerHTML+=`<div class="cust-item ${activeClass}" onclick="showDef('${c.replace(/'/g,"\\'")}')"><strong>${c}</strong><span style="font-size:0.8em; color:${total<0?'#ef4444':'#10b981'}">คงเหลือ: ${fmt(total)}</span></div>`;
+            }
+        }
+    }
+
+    function showDef(n) {
+        curDefCust = n; renderDeferred();
+        const data = app.defLedger[n];
+        document.getElementById('def-title').innerText = n;
+        
+        document.getElementById('def-bf-box').style.display = 'flex';
+        document.getElementById('inp-def-bf').value = data.bf || 0;
+
+        let runBal = data.bf || 0;
+        let h=`<table width="100%"><thead><tr><th>วันที่</th><th>เอกสาร</th><th>รายการ</th><th class="text-right">ตัดออก (Dr)</th><th class="text-right">รับมัดจำ (Cr)</th><th class="text-right">คงเหลือ</th></tr></thead><tbody>`;
+        h += `<tr style="background:#fffbeb; font-weight:bold; color:#92400e;"><td colspan="3">ยอดยกมา (B/F)</td><td></td><td></td><td class="text-right">${fmt(runBal)}</td></tr>`;
+        
+        data.txns.forEach(r=>{ 
+            runBal += (r.cr - r.dr); 
+            h+=`<tr><td>${r.d}</td><td>${r.doc}</td><td>${r.des}</td><td class="text-right" style="color:#ef4444;">${r.dr>0 ? fmt(r.dr) : '-'}</td><td class="text-right" style="color:#10b981;">${r.cr>0 ? fmt(r.cr) : '-'}</td><td class="text-right font-bold">${fmt(runBal)}</td></tr>`; 
+        });
+        document.getElementById('def-detail').innerHTML=h+`</tbody></table>`;
+    }
+
+    function saveDefBF() { 
+        if(curDefCust) { 
+            app.defLedger[curDefCust].bf = Number(document.getElementById('inp-def-bf').value); 
+            saveData(); showDef(curDefCust); renderDeferred(); 
+        } 
+    }
+    
+    function addDefManual() {
+        let n = prompt("ระบุชื่อบริษัท/ลูกหนี้ใหม่:");
+        if(n && !app.defLedger[n]) {
+            app.defLedger[n] = { bf:0, txns:[] };
+            saveData(); renderDeferred(); showDef(n); 
+        } else if (app.defLedger[n]) { showDef(n); }
+    }
+
+    // --- IMPORT EXCEL ---
+    function impUniv(el, t) {
+        const f = el.files[0]; if(!f) return;
+        const reader = new FileReader();
+        if(f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) {
+            reader.readAsArrayBuffer(f);
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const jsonArr = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1, defval:""});
+                processData(jsonArr, t);
+            };
+        } else {
+            let enc='windows-874'; // Standard for Thai CSV
+            if(t==='sso'||t==='asset'||t==='oca'||t==='ocl') enc='utf-8'; // Override if needed
+            reader.readAsText(f, enc); 
+            reader.onload = (e) => {
+                let lines = e.target.result.split(/\r\n|\n/).map(l => (l.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[]).map(m=>m.replace(/^"|"$/g,'').trim()));
+                processData(lines, t);
+            };
+        }
+        el.value = '';
+    }
+
+    function processData(rows, t) {
+        let hI=-1;
+        for(let i=0; i<Math.min(rows.length,50); i++) {
+            let r = rows[i].map(x=>String(x).toLowerCase());
+            if(r.some(x=>x.includes("วันที่")||x.includes("date"))) { hI=i; break; }
+        }
+        if(hI<0){alert("ไม่พบหัวตาราง (ต้องมีคอลัมน์ 'วันที่')"); return;}
+
+        let h=rows[hI].map(x=>String(x).toLowerCase());
+        let cDt=h.findIndex(c=>c.includes("วันที่")||c.includes("date"));
+        let cDes=h.findIndex(c=>c.includes("รายการ")||c.includes("ชื่อ")||c.includes("desc"));
+        let cVal=h.findIndex(c=>c.includes("จำนวน")||c.includes("amount")||c.includes("ทุน"));
+        let cDr=h.findIndex(c=>c.includes("เดบิต")); let cCr=h.findIndex(c=>c.includes("เครดิต"));
+
+        if(t==='def'){
+            let count = 0;
+            for(let i=hI+1; i<rows.length; i++){
+                let r=rows[i]; if(!r[cDt]) continue;
+                let dStr = r[cDt];
+                if(typeof dStr === 'number') { dStr = new Date((dStr - (25567 + 2))*86400*1000).toLocaleDateString('en-GB'); }
+                let dr=parseFloat(String(r[cDr]||0).replace(/,/g,''))||0;
+                let cr=parseFloat(String(r[cCr]||0).replace(/,/g,''))||0;
+                if(dr!==0 || cr!==0){
+                    let n = String(r[cDes]||"").replace(/^(ขาย-|รับเงินมัดจำ-|รับชำระหนี้-|ขายเชื่อ)[-\s]*/g,'').trim();
+                    n = n.replace(/(บริษัท|จำกัด|หจก\.|บจก\.|มหาชน|\(สำนักงานใหญ่\)|\(มหาชน\))/g, '').trim();
+                    if(!app.defLedger[n]) app.defLedger[n] = { bf:0, txns:[] };
+                    let exists = app.defLedger[n].txns.some(x => x.d==dStr && x.dr==dr && x.cr==cr);
+                    if(!exists) { app.defLedger[n].txns.push({ d:dStr, doc:r[cDes-1]||"", des:String(r[cDes]||""), dr, cr }); count++; }
+                }
+            }
+            alert(`Import Deferred สำเร็จ: ${count} รายการ`); renderDeferred();
+        } else if(t==='revGL') {
+             // Logic for Revenue GL Import mapping to months
+             // (Simplified logic: assumes input is 12 rows of monthly totals)
+             alert("กรุณากรอกยอด GL ด้วยตัวเองในตาราง หรือปรับไฟล์ให้เป็นรูปแบบรายเดือน");
+        } else if(t==='sso') {
+             app.ssoData = [];
+             for(let i=hI+1; i<rows.length; i++) { let r=rows[i]; if(r[cVal]) app.ssoData.push({m:i-hI-1, emp:0, wage:parseFloat(String(r[cVal]).replace(/,/g,'')), d:0, c:0, dt:r[cDt]}); }
+             alert("Import SSO เรียบร้อย");
+        } else if(t==='asset') {
+             for(let i=hI+1; i<rows.length; i++) { let r=rows[i]; if(r[cDes]) app.assets.push({n:r[cDes], d:r[cDt], c:parseFloat(String(r[cVal]).replace(/,/g,'')), r:20, bf:0}); }
+             alert("Import Assets เรียบร้อย");
+        }
+        saveData(); renderAll();
+    }
+
+    // --- OTHER ---
+    function setWHTTab(el, t){ curWHT=t; document.querySelectorAll('#page-wht .tab-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderWHT(); }
+    function renderWHT(){
+        const tb=document.getElementById('tb-wht'); tb.innerHTML='';
+        document.getElementById('th-wht-emp').style.display = (curWHT==='pnd1') ? '' : 'none';
+        app.whtData[curWHT].forEach((r,i)=> {
+            let empCol = (curWHT==='pnd1') ? `<td><input type="number" class="tbl-inp center" value="${r.emp||0}" onchange="upd('wht',${i},'emp',this.value)"></td>` : '';
+            tb.innerHTML+=`<tr><td class="center">${mo[r.month]}</td>${empCol}<td><input class="tbl-inp" value="${r.income}" onchange="upd('wht',${i},'income',this.value)"></td><td><input class="tbl-inp" value="${r.tax}" onchange="upd('wht',${i},'tax',this.value)"></td><td><input class="tbl-inp center" value="${r.rcpNo||''}" placeholder="เลขที่ใบเสร็จ" onchange="upd('wht',${i},'rcpNo',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.fileDate||''}" onchange="upd('wht',${i},'fileDate',this.value)"></td><td><select class="tbl-inp center" onchange="upd('wht',${i},'status',this.value)"><option value="รอ" ${r.status=='รอ'?'selected':''}>รอ</option><option value="ยื่นแล้ว" ${r.status=='ยื่นแล้ว'?'selected':''}>ยื่นแล้ว</option></select></td></tr>`;
+        });
+    }
+    function renderRevRecon() {
+        const tb=document.getElementById('tb-rev-recon'); tb.innerHTML='';
+        for(let i=0; i<Math.max(12,app.pp30.length); i++) {
+             if(!app.revRecon[i]) app.revRecon[i] = {def_end:0, def_bf:0, gl:0};
+             let pp = app.pp30[i] ? app.pp30[i].s : 0;
+             let gl = app.revRecon[i].gl, def_end = app.revRecon[i].def_end, def_bf = app.revRecon[i].def_bf;
+             let diff = (Number(pp) + def_end - def_bf) - gl;
+             tb.innerHTML += `<tr><td>${app.pp30[i]?app.pp30[i].m:mo[i]}</td><td class="text-right">${fmt(pp)}</td><td><input class="tbl-inp" value="${def_end}" onchange="upd('rev',${i},'def_end',this.value)"></td><td><input class="tbl-inp" value="${def_bf}" onchange="upd('rev',${i},'def_bf',this.value)"></td><td class="text-right">${fmt(Number(pp)+def_end-def_bf)}</td><td style="background:#eff6ff;"><input class="tbl-inp" value="${gl}" onchange="upd('rev',${i},'gl',this.value)"></td><td class="text-right" style="color:${Math.abs(diff)>1?'red':'green'}; font-weight:bold;">${fmt(diff)}</td></tr>`;
+        }
+    }
+    function renderSSO() { const t=document.getElementById('tb-sso'); t.innerHTML=''; app.ssoData.forEach((r,i)=>t.innerHTML+=`<tr><td class="center">${mo[r.m]}</td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('sso',${i},'emp',this.value)"></td><td><input class="tbl-inp" value="${r.wage}" onchange="upd('sso',${i},'wage',this.value)"></td><td><input class="tbl-inp" value="${r.d}" onchange="upd('sso',${i},'d',this.value)"></td><td><input class="tbl-inp" value="${r.c}" onchange="upd('sso',${i},'c',this.value)"></td><td style="text-align:right;">${fmt((r.d*1)+(r.c*1))}</td><td><input type="date" class="tbl-inp" value="${r.dt||''}" onchange="upd('sso',${i},'dt',this.value)"></td></tr>`); const k=document.getElementById('tb-kt20'); k.innerHTML=''; app.kt20Data.forEach((r,i)=>k.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('kt20',${i})">x</button></td><td><input class="tbl-inp center" value="${r.y||''}" onchange="upd('kt20',${i},'y',this.value)"></td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('kt20',${i},'emp',this.value)"></td><td><input class="tbl-inp text-right" value="${r.w||0}" onchange="upd('kt20',${i},'w',this.value)"></td><td><input class="tbl-inp text-right" value="${r.pay||0}" onchange="upd('kt20',${i},'pay',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.dt||''}" onchange="upd('kt20',${i},'dt',this.value)"></td></tr>`); }
+    function renderAssets() { const t=document.getElementById('tb-assets'); t.innerHTML=''; app.assets.forEach((a,i)=>t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('assets',${i})">x</button></td><td><input class="tbl-inp" style="text-align:left" value="${a.n}" onchange="updArr('assets',${i},'n',this.value)"></td><td><input type="date" class="tbl-inp" value="${a.d}" onchange="updArr('assets',${i},'d',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.c}" onchange="updArr('assets',${i},'c',this.value)"></td><td><input type="number" class="tbl-inp center" value="${a.r}" onchange="updArr('assets',${i},'r',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.bf}" onchange="updArr('assets',${i},'bf',this.value)"></td><td class="text-right">...</td><td class="text-right">...</td><td class="text-right">...</td></tr>`); }
+    function renderOC() { 
+        const t1=document.getElementById('tb-oca'); t1.innerHTML=''; app.oca.forEach((o,i)=>t1.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('oca',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('oca',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('oca',${i},'n',this.value)"></td><td><input type="number" class="tbl-inp" value="${o.v}" onchange="updArr('oca',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('oca',${i},'r',this.value)"></td></tr>`);
+        const t2=document.getElementById('tb-ocl'); t2.innerHTML=''; app.ocl.forEach((o,i)=>t2.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('ocl',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('ocl',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('ocl',${i},'n',this.value)"></td><td><input type="number" class="tbl-inp" value="${o.v}" onchange="updArr('ocl',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('ocl',${i},'r',this.value)"></td></tr>`);
+    }
+
+    function upd(type, i, k, v) { 
+        if(type==='pp30') app.pp30[i][k]=(k==='pd'||k==='rcp'||k==='m')?v:Number(v);
+        if(type==='wht') app.whtData[curWHT][i][k]=(k==='date'||k==='rcpNo'||k==='fileDate'||k==='status'?v:Number(v));
+        if(type==='sso') app.ssoData[i][k]=(k==='dt'?v:Number(v));
+        if(type==='kt20') app.kt20Data[i][k]=(k==='dt'?v:Number(v));
+        if(type==='rev') { if(!app.revRecon[i]) app.revRecon[i]={}; app.revRecon[i][k]=Number(v); }
+        saveData(); renderAll();
+    }
+    function updArr(type, i, k, v) { app[type][i][k] = (k==='d'||k==='n'||k==='r') ? v : Number(v); saveData(); renderAll(); }
+    function delRow(type, i) { if(type==='assets'||type==='oca'||type==='ocl') app[type].splice(i,1); else if(type==='pp30') app.pp30.splice(i,1); else if(type==='kt20') app.kt20Data.splice(i,1); saveData(); renderAll(); }
+    
+    function addPP30Row(){ app.pp30.push({m:'ระบุเดือน',s:0,ts:0,b:0,tb:0,pd:'',rcp:''}); saveData(); renderAll(); }
+    function addKT20(){ app.kt20Data.push({y:new Date().getFullYear()+543,emp:0,w:0,pay:0}); saveData(); renderAll(); }
+    function addAsset(){ app.assets.push({n:'ทรัพย์สินใหม่',d:'',c:0,r:20,bf:0}); saveData(); renderAll(); }
+    function addOC(t){ let o={d:'',n:'',v:0,r:''}; if(t==1) app.oca.push(o); else app.ocl.push(o); saveData(); renderAll(); }
+    
+    function calcCIT() {
+        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => app.cit[k] = Number(document.getElementById('cit_'+k).value));
+        let totalAdd = app.cit.add1 + app.cit.add2 + app.cit.add3;
+        let totalDed = app.cit.ded1 + app.cit.ded2 + app.cit.ded3;
+        let taxProfit = app.cit.net + totalAdd - totalDed;
+        let taxAmt = taxProfit > 0 ? taxProfit * (app.cit.rate/100) : 0;
+        let netPay = taxAmt - app.cit.wht - app.cit.half;
+        document.getElementById('cit_tax_profit').innerText = fmt(taxProfit);
+        document.getElementById('cit_amount').innerText = fmt(taxAmt);
+        document.getElementById('cit_net_pay').innerText = fmt(netPay);
+        document.getElementById('cit_net_pay').style.color = netPay > 0 ? 'red' : 'green';
+        saveData();
+    }
+    function backupData(){ const a=document.createElement('a'); a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(app)); a.download='MAudit_Backup.json'; a.click(); }
+    function restoreData(el){ const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{app=JSON.parse(e.target.result); saveData(); location.reload();}; r.readAsText(f); }
+    function exportToExcel(eid, fname) { var wb = XLSX.utils.table_to_book(document.getElementById(eid)); XLSX.writeFile(wb, fname+".xlsx"); }
+    function saveVatNote() { app.vatNote = document.getElementById('vat-note').value; saveData(); }
+    function clearDef() { if(confirm('ล้างข้อมูล Deferred?')) { app.defLedger={}; curDefCust=null; saveData(); renderDeferred(); document.getElementById('def-detail').innerHTML=''; document.getElementById('def-bf-box').style.display='none'; } }
+    
+    function exportDeferred() {
+        let d = [["Customer", "Date", "Doc", "Desc", "Cut (Dr)", "Deposit (Cr)", "Balance"]];
+        for(let k in app.defLedger) {
+            let bal = app.defLedger[k].bf || 0;
+            d.push([k, "B/F", "", "ยอดยกมา", "", "", bal]);
+            app.defLedger[k].txns.forEach(t => { bal+=(t.cr-t.dr); d.push([k, t.d, t.doc, t.des, t.dr, t.cr, bal]); });
+        }
+        const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "Deferred_Revenue");
+        XLSX.writeFile(wb, "Deferred_Report.xlsx");
+    }
+</script>
+</body>
+</html>

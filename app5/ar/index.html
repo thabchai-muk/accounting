@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Audit Pro : V.16.2 Intelligent Import</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root { --primary: #0284c7; --bg: #f0f9ff; --text: #0c4a6e; --danger: #e11d48; --success: #059669; --warn: #f59e0b; }
+        body { font-family: 'Sarabun', sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        #app-container { display: flex; flex: 1; padding: 20px; flex-direction: column; height: 100%; box-sizing: border-box; }
+        .container { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+        
+        .header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .toolbar { padding: 10px 20px; background: #e0f2fe; border-bottom: 1px solid #bae6fd; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
+        .btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-family: 'Sarabun'; display: inline-flex; align-items: center; gap: 5px; font-weight: bold; font-size: 0.9rem; white-space: nowrap; transition: 0.2s; color: white; text-decoration: none; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-blue { background: #0284c7; } .btn-orange { background: #ea580c; } .btn-green { background: #059669; } .btn-red { background: #e11d48; } .btn-purple { background: #7c3aed; } .btn-gray { background: #64748b; } .btn-aging { background: #d97706; }
+        
+        .main-content { display: grid; grid-template-columns: 320px 1fr; flex: 1; overflow: hidden; }
+        .sidebar { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-summary { background: #e0f2fe; padding: 15px; border-bottom: 1px solid #bae6fd; }
+        .sum-card { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; }
+        .sum-title { font-size: 0.8rem; color: #0c4a6e; font-weight: bold; }
+        .sum-val { font-size: 1.1rem; color: #0284c7; font-weight: bold; font-family: 'Courier New', monospace; }
+
+        .sup-item { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: 0.1s; }
+        .sup-item:hover { background: #f0f9ff; }
+        .sup-item.active { background: #bae6fd; border-left: 4px solid var(--primary); }
+        .sup-name { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sup-bal { font-size: 0.85rem; display: flex; justify-content: space-between; color: #64748b; margin-top: 4px; }
+        
+        .detail-view { display: flex; flex-direction: column; overflow: hidden; background: white; }
+        .detail-header { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        .tabs { display: flex; padding: 0 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; border-radius: 8px 8px 0 0; font-weight: bold; color: #64748b; margin-bottom: -1px; }
+        .tab-btn.active { background: white; border-color: #e2e8f0; border-bottom-color: white; color: var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 0; display: none; }
+        .tab-content.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: #f1f5f9; padding: 10px; text-align: left; color: #475569; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .num { text-align: right; font-family: 'Courier New', monospace; font-weight: bold; }
+        .col-dr { color: var(--primary); } .col-cr { color: var(--success); }
+        
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .modal-content { background: white; margin: 3% auto; padding: 25px; width: 90%; max-width: 1000px; border-radius: 10px; max-height: 90vh; display: flex; flex-direction: column; }
+        .aging-table th { background: #0284c7; color: white; text-align: center; }
+        .aging-table td { border-bottom: 1px solid #e2e8f0; }
+        .overdue { color: #e11d48; font-weight: bold; background: #fff1f2; }
+        .form-group { margin-bottom: 15px; } .form-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        
+        .empty-state { text-align: center; color: #cbd5e1; margin-top: 100px; }
+        @media print { .no-print, .sidebar { display: none !important; } #app-container { display: flex !important; padding: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 style="margin:0;"><i class="fas fa-file-invoice-dollar"></i> AR Audit Working Paper</h1>
+                <small style="opacity:0.8;">V.16.2 Intelligent Import</small>
+            </div>
+            <div class="no-print">
+                <span id="save-status" style="opacity:0; transition:0.3s; font-size:0.9rem; color:#fff; margin-right:10px;"><i class="fas fa-check"></i> บันทึกแล้ว</span>
+                <a href="../index.html" class="btn btn-gray"><i class="fas fa-arrow-left"></i> กลับ Dashboard</a>
+            </div>
+        </div>
+
+        <div class="toolbar no-print">
+            <input type="file" id="f-imp" hidden onchange="handleFile(this)">
+            <button class="btn btn-blue" onclick="document.getElementById('f-imp').click()"><i class="fas fa-file-import"></i> Import GL/Excel</button>
+            <button class="btn btn-orange" onclick="addBF()"><i class="fas fa-plus-circle"></i> เพิ่ม B/F</button>
+            
+            <div style="width:1px; height:30px; background:#bae6fd; margin:0 10px;"></div>
+            
+            <div style="display:flex; align-items:center; gap:5px; background:white; padding:5px 10px; border-radius:6px; border:1px solid #bae6fd;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#0c4a6e;">Cut-off:</span>
+                <input type="date" id="cutoff-date" style="border:1px solid #ccc; border-radius:4px; padding:2px;" onchange="save()">
+            </div>
+            <button class="btn btn-aging" onclick="openAgingModal()"><i class="fas fa-chart-bar"></i> Aging Report</button>
+            
+            <div style="flex:1;"></div>
+            <button class="btn btn-gray" onclick="backupData()"><i class="fas fa-download"></i> Backup</button>
+            <input type="file" id="f-restore" hidden onchange="restoreData(this)">
+            <button class="btn btn-gray" onclick="document.getElementById('f-restore').click()"><i class="fas fa-upload"></i> Restore</button>
+            <button class="btn btn-green" onclick="exportWP()"><i class="fas fa-file-excel"></i> Export WP</button>
+            <button class="btn btn-red" onclick="clearData()"><i class="fas fa-trash-alt"></i> ล้าง</button>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-summary">
+                    <div class="sum-card">
+                        <div class="sum-title">ลูกหนี้สุทธิ (Net AR)</div>
+                        <div class="sum-val" id="sum-total-ar">0.00</div>
+                    </div>
+                </div>
+                <div class="sup-list-container" id="sup-list"></div>
+            </div>
+            <div class="detail-view" id="detail-view">
+                <div class="empty-state"><i class="fas fa-folder-open" style="font-size:4rem; opacity:0.5;"></i><p>เลือกลูกหนี้เพื่อดูรายละเอียด</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="agingModal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h2 style="margin:0; color:var(--primary);">รายงานวิเคราะห์อายุลูกหนี้ (Aging Report)</h2>
+            <button class="btn btn-red" onclick="closeModal('agingModal')">ปิด</button>
+        </div>
+        <div style="flex:1; overflow:auto;">
+            <table class="aging-table" width="100%">
+                <thead><tr><th>ชื่อลูกหนี้</th><th width="100">ยอดรวม</th><th width="100">ยังไม่ถึงกำหนด</th><th width="100">1-30 วัน</th><th width="100">31-60 วัน</th><th width="100">61-90 วัน</th><th width="100">> 90 วัน</th></tr></thead>
+                <tbody id="aging-body"></tbody>
+                <tfoot id="aging-foot" style="background:#e0f2fe; font-weight:bold;"></tfoot>
+            </table>
+        </div>
+        <div style="text-align:right; margin-top:15px;"><button class="btn btn-green" onclick="exportAgingExcel()">Export Report</button></div>
+    </div>
+</div>
+
+<div id="bfModal" class="modal">
+    <div class="modal-content" style="width:400px; height:auto;">
+        <h3 style="color:var(--primary); margin-top:0;">เพิ่มลูกหนี้ยกมา (B/F)</h3>
+        <input type="hidden" id="bf-sup-key">
+        <div class="form-group"><label>วันที่</label><input type="date" id="bf-date" class="form-input"></div>
+        <div class="form-group"><label>เลขที่เอกสาร</label><input type="text" id="bf-item" class="form-input" value="B/F"></div>
+        <div class="form-group"><label>รายละเอียด</label><input type="text" id="bf-desc" class="form-input" value="ยอดยกมา"></div>
+        <div class="form-group"><label>ยอดคงค้าง (Dr)</label><input type="number" id="bf-amt" class="form-input" placeholder="0.00"></div>
+        <div style="text-align:right;"><button class="btn btn-red" onclick="closeModal('bfModal')">ยกเลิก</button><button class="btn btn-green" onclick="saveBF()">บันทึก</button></div>
+    </div>
+</div>
+
+<script>
+    let app = { customers: {}, cutOffDate: new Date().toISOString().split('T')[0] };
+    let currentCust = null;
+
+    window.onload = () => {
+        const s = localStorage.getItem('ar_wp_v16');
+        if(s) { app = JSON.parse(s); }
+        if(!app.cutOffDate) app.cutOffDate = new Date().toISOString().split('T')[0];
+        document.getElementById('cutoff-date').value = app.cutOffDate;
+        renderSidebar();
+    };
+
+    function save() {
+        app.cutOffDate = document.getElementById('cutoff-date').value;
+        localStorage.setItem('ar_wp_v16', JSON.stringify(app));
+        const el = document.getElementById('save-status'); el.style.opacity = 1; setTimeout(()=>el.style.opacity=0, 1000);
+    }
+
+    // --- IMPORT LOGIC (REVISED FOR MESSY FILES) ---
+    function handleFile(el) {
+        const f = el.files[0]; if(!f) return;
+        const r = new FileReader();
+        if(f.name.toLowerCase().endsWith('.csv')) { r.readAsText(f, 'windows-874'); r.onload = e => { processCSV(e.target.result); }; } 
+        else { r.readAsArrayBuffer(f); r.onload = e => { const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'}); processArray(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1})); }; }
+        el.value = '';
+    }
+    function processCSV(txt) { processArray(txt.split(/\r\n|\n/).map(l => (l.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[]).map(m=>m.replace(/^"|"$/g,'').trim()))); }
+
+    function processArray(rows) {
+        let hIdx=-1, c={d:-1, des:-1, dr:-1, cr:-1, name:-1, item:-1};
+        
+        // 1. Scan for Header: Find row with most matching keywords
+        let maxScore = 0;
+        for(let i=0; i<Math.min(rows.length, 50); i++) {
+            let rowStr = rows[i].map(x=>String(x).toLowerCase()).join(' ');
+            let score = 0;
+            if(rowStr.includes('วันที่') || rowStr.includes('date')) score++;
+            if(rowStr.includes('เดบิต') || rowStr.includes('debit') || rowStr.includes('จำนวนเงิน')) score++;
+            if(rowStr.includes('เครดิต') || rowStr.includes('credit')) score++;
+            
+            if(score > maxScore) { maxScore = score; hIdx = i; }
+        }
+
+        if(hIdx === -1 || maxScore < 2) return alert("ไม่พบหัวตารางที่ชัดเจน (ต้องมี 'วันที่' และ 'เดบิต/เครดิต')");
+
+        // 2. Map Columns
+        let header = rows[hIdx].map(x=>String(x).toLowerCase());
+        header.forEach((v,k)=>{
+            if(v.includes('วันที่')||v.includes('date')) c.d=k;
+            else if(v.includes('ชื่อ')||v.includes('customer')||v.includes('client')) c.name=k;
+            else if(v.includes('รายการ')||v.includes('อธิบาย')||v.includes('desc')) c.des=k;
+            else if(v.includes('เอกสาร')||v.includes('inv')||v.includes('doc')) c.item=k;
+            else if(v.includes('เดบิต')||v.includes('debit')||v.includes('จำนวนเงิน')) c.dr=k;
+            else if(v.includes('เครดิต')||v.includes('credit')) c.cr=k;
+        });
+
+        // Fallback Name logic
+        if(c.name === -1 && c.des !== -1) c.name = c.des; 
+
+        let cnt=0;
+        for(let i=hIdx+1; i<rows.length; i++) {
+            const r = rows[i]; if(!r[c.d]) continue;
+            
+            let dr = parseFloat(String(r[c.dr]||0).replace(/,/g,''))||0;
+            let cr = parseFloat(String(r[c.cr]||0).replace(/,/g,''))||0;
+            
+            // Allow Debit Only OR Credit Only rows (AR can have both)
+            if(dr===0 && cr===0) {
+                // Try to find amount in other columns if mapped wrong? No, stick to mapping.
+                continue;
+            }
+
+            // Name Cleaning
+            let rawName = "";
+            if(c.name > -1 && r[c.name]) rawName = r[c.name];
+            else if(c.des > -1 && r[c.des]) rawName = r[c.des];
+            
+            let name = cleanName(rawName);
+            if(name.length < 2 || name === "ไม่ระบุ") continue;
+
+            if(!app.customers[name]) app.customers[name] = { txns:[] };
+
+            let dStr = parseDate(r[c.d]);
+            let des = (c.des > -1) ? (r[c.des]||"") : "";
+            let itemRef = (c.item > -1 && r[c.item]) ? String(r[c.item]).trim() : "";
+
+            let exists = app.customers[name].txns.some(t => t.d === dStr && t.dr === dr && t.cr === cr && t.item === itemRef);
+            if(!exists) {
+                app.customers[name].txns.push({
+                    id: Date.now() + Math.random(),
+                    d: dStr, item: itemRef, des: des,
+                    dr: dr, cr: cr, matched: false, note: ""
+                });
+                cnt++;
+            }
+        }
+        save(); renderSidebar();
+        alert(`Import สำเร็จ ${cnt} รายการ\n(ตรวจสอบรายชื่อทางซ้ายมือ)`);
+    }
+
+    function cleanName(t) {
+        let s = String(t).trim();
+        // Cut Prefix: 001-Name -> Name
+        s = s.replace(/^[\d\-\.\)\s]+/, ''); 
+        // Cut Accounting Words
+        s = s.replace(/^(ลูกหนี้|การค้า|รับชำระ|ขาย|บ\/ช|รหัส|Account)\s*/g, '');
+        // Cut Legal Suffixes to group same company
+        s = s.replace(/(\(สำนักงานใหญ่\)|\(สาขา.*\)|จำกัด|มหาชน|บจก\.|หจก\.|บริษัท|ห้างหุ้นส่วน)/gi, '');
+        return s.trim() || "ไม่ระบุ";
+    }
+
+    function parseDate(v) {
+        if(typeof v==='number') return new Date((v-25569)*864e5).toLocaleDateString('en-GB');
+        let s = String(v).trim();
+        if(s.match(/^\d{4}-\d{2}-\d{2}$/)) { let p=s.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+        if(s.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) { 
+            let p=s.split('/'); 
+            if(parseInt(p[2]) > 2400) p[2] = parseInt(p[2])-543; 
+            return `${p[0].padStart(2,'0')}/${p[1].padStart(2,'0')}/${p[2]}`; 
+        }
+        return s;
+    }
+
+    // --- AGING LOGIC (With Net Balance Calculation) ---
+    function openAgingModal() {
+        const cutoff = new Date(app.cutOffDate);
+        const tb = document.getElementById('aging-body'); tb.innerHTML = '';
+        const foot = document.getElementById('aging-foot');
+        let totalSum = {all:0, cur:0, d30:0, d60:0, d90:0, dOver:0};
+
+        Object.keys(app.customers).sort().forEach(k => {
+            let s = app.customers[k];
+            // AR Net Balance = Total Debit - Total Credit
+            let netBal = s.txns.reduce((a,b) => a + (b.dr - b.cr), 0);
+            
+            // Only show if there is a significant balance
+            if(Math.abs(netBal) < 1) return;
+
+            let row = {cur:0, d30:0, d60:0, d90:0, dOver:0};
+            
+            // Logic: Distribute outstanding invoices into buckets
+            // *NOTE: This is a simplified calculation assuming standard FIFO if matches aren't done*
+            let outstanding = s.txns.filter(t => !t.matched && t.dr > 0);
+            
+            // If invoices exist, use their dates. If balance exists but no specific invoices (e.g. from B/F), put in Overdue.
+            if(outstanding.length > 0) {
+                outstanding.forEach(t => {
+                    let p = t.d.split('/');
+                    let invDate = new Date(`${p[2]}-${p[1]}-${p[0]}`);
+                    let diffDays = Math.ceil(Math.abs(cutoff - invDate) / (1000 * 60 * 60 * 24));
+                    
+                    // Simple allocation
+                    if(diffDays <= 0) row.cur += t.dr;
+                    else if(diffDays <= 30) row.d30 += t.dr;
+                    else if(diffDays <= 60) row.d60 += t.dr;
+                    else if(diffDays <= 90) row.d90 += t.dr;
+                    else row.dOver += t.dr;
+                });
+            } else {
+                // Fallback: If only B/F exists or manual entry
+                row.dOver = netBal;
+            }
+
+            // Adjust sum to match Net Balance
+            // (Real world logic is complex, here we scale primarily by Overdue for audit safety)
+            let allocated = row.cur + row.d30 + row.d60 + row.d90 + row.dOver;
+            if(allocated !== netBal) {
+                // Difference (usually unallocated credits)
+                // Deduct from oldest bucket first (FIFO)
+                let diff = allocated - netBal; 
+                // Simple adjustment: subtract from Overdue first
+                row.dOver -= diff; 
+            }
+
+            totalSum.all += netBal; totalSum.cur += row.cur; totalSum.d30 += row.d30;
+            totalSum.d60 += row.d60; totalSum.d90 += row.d90; totalSum.dOver += row.dOver;
+
+            tb.innerHTML += `<tr><td>${k}</td><td class="num font-bold">${fmt(netBal)}</td><td class="num" style="color:#aaa;">${fmt(row.cur)}</td><td class="num">${fmt(row.d30)}</td><td class="num">${fmt(row.d60)}</td><td class="num">${fmt(row.d90)}</td><td class="num overdue">${fmt(row.dOver)}</td></tr>`;
+        });
+
+        foot.innerHTML = `<tr><td align="right">Total:</td><td class="num">${fmt(totalSum.all)}</td><td class="num">${fmt(totalSum.cur)}</td><td class="num">${fmt(totalSum.d30)}</td><td class="num">${fmt(totalSum.d60)}</td><td class="num">${fmt(totalSum.d90)}</td><td class="num overdue">${fmt(totalSum.dOver)}</td></tr>`;
+        document.getElementById('agingModal').style.display = 'block';
+    }
+
+    // --- UI LOGIC ---
+    function renderSidebar() {
+        const el = document.getElementById('sup-list'); el.innerHTML='';
+        let totalAR = 0;
+        Object.keys(app.customers).sort().forEach(k => {
+            let s = app.customers[k], bal = s.txns.reduce((a,b)=>a+(b.dr-b.cr), 0);
+            totalAR += bal;
+            el.innerHTML += `<div class="sup-item ${currentCust===k?'active':''}" onclick="currentCust='${k}';renderDetail('${k}');renderSidebar()">
+                <span class="sup-name">${k}</span><div class="sup-bal"><span>${s.txns.length} รายการ</span><span style="font-weight:bold; color:${bal>0?'#0284c7':'#64748b'}">${fmt(bal)}</span></div></div>`;
+        });
+        document.getElementById('sum-total-ar').innerText = fmt(totalAR);
+    }
+
+    function renderDetail(key) {
+        const s = app.customers[key], bal = s.txns.reduce((a,b)=>a+(b.dr-b.cr), 0);
+        document.getElementById('detail-view').innerHTML = `
+            <div class="detail-header"><div style="display:flex; justify-content:space-between;"><h2>${key}</h2><div style="text-align:right"><span>ลูกหนี้สุทธิ</span><span style="font-size:1.5rem; font-weight:bold; color:#0284c7;">${fmt(bal)}</span></div></div>
+            <div style="margin-top:10px;"><button class="btn btn-purple" onclick="autoMatch('${key}')">Auto Match</button> <button class="btn btn-blue" onclick="manualMatch('${key}')">จับคู่ที่เลือก</button></div></div>
+            <div class="tabs"><div class="tab-btn active" onclick="switchTab(this,'tab-outs')">กระดาษทำการ (Outstanding)</div><div class="tab-btn" onclick="switchTab(this,'tab-hist')">ประวัติ (History)</div></div>
+            <div id="tab-outs" class="tab-content active">${renderTable(s.txns.filter(t=>!t.matched), key, false)}</div>
+            <div id="tab-hist" class="tab-content"><button class="btn btn-gray btn-sm" onclick="unmatchSelected('${key}')" style="margin:10px;">ยกเลิกการจับคู่</button>${renderTable(s.txns.filter(t=>t.matched), key, true)}</div>`;
+    }
+
+    function renderTable(data, key, isHist) {
+        if(!data.length) return '<div class="empty-state"><p>ไม่มีรายการ</p></div>';
+        let h=`<table><thead><tr><th width="30"><input type="checkbox" onchange="toggleChk(this,'${isHist?'hist':'outs'}')"></th><th>วันที่</th><th>เอกสาร</th><th>รายการ</th><th class="num">เดบิต (หนี้)</th><th class="num">เครดิต (จ่าย)</th><th>Audit Note</th></tr></thead><tbody>`;
+        data.forEach(t=>{ let idx=app.customers[key].txns.findIndex(x=>x.id===t.id);
+            h+=`<tr><td><input type="checkbox" class="chk-row chk-${isHist?'hist':'outs'}" value="${idx}"></td><td>${t.d}</td><td>${t.item}</td><td>${t.des}</td><td class="num col-dr">${t.dr>0?fmt(t.dr):'-'}</td><td class="num col-cr">${t.cr>0?fmt(t.cr):'-'}</td>
+            <td><input class="audit-note" value="${t.note||''}" placeholder="..." onchange="updNote('${key}',${idx},this.value)"></td></tr>`;
+        }); return h+'</tbody></table>';
+    }
+
+    function autoMatch(key) { let s=app.customers[key],m=0; s.txns.forEach(t1=>{if(!t1.matched&&t1.dr>0){let i2=s.txns.findIndex(t2=>!t2.matched&&t2.cr>0&&Math.abs(t2.cr-t1.dr)<0.05);if(i2!==-1){t1.matched=true;s.txns[i2].matched=true;m++;}}}); save(); renderDetail(key); renderSidebar(); alert(`Matched ${m} pairs`); }
+    function manualMatch(key) { let chks=document.querySelectorAll('.chk-outs:checked'); if(!chks.length)return alert('เลือกรายการ'); let sd=0,sc=0; chks.forEach(c=>{let t=app.customers[key].txns[c.value]; sd+=t.dr; sc+=t.cr;}); let diff=sd-sc; 
+        if(Math.abs(diff)>0.05){ if(confirm(`ยอดไม่เท่ากัน (ผลต่าง ${fmt(diff)})\nสร้างรายการคงค้างหรือไม่?`)) app.customers[key].txns.push({id:Date.now(),d:new Date().toLocaleDateString('en-GB'),item:"CF",des:"ยอดคงเหลือ",dr:diff>0?diff:0,cr:diff<0?Math.abs(diff):0,matched:false}); else return; }
+        chks.forEach(c=>app.customers[key].txns[c.value].matched=true); save(); renderDetail(key); renderSidebar(); }
+    
+    function unmatchSelected(key) { let c=document.querySelectorAll('.chk-hist:checked'); c.forEach(e=>app.customers[key].txns[e.value].matched=false); save(); renderDetail(key); renderSidebar(); }
+    function switchTab(el, id){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); el.classList.add('active'); document.getElementById(id).classList.add('active'); }
+    function toggleChk(el,t){ document.querySelectorAll(`.chk-${t}`).forEach(c=>c.checked=el.checked); }
+    function updNote(k,i,v){ app.customers[k].txns[i].note=v; save(); }
+    function addBF(){ if(!currentCust)return alert("เลือกรายการ"); document.getElementById('bf-sup-key').value=currentCust; document.getElementById('bfModal').style.display='block'; }
+    function closeBFModal(){ document.getElementById('bfModal').style.display='none'; }
+    function closeModal(id){ document.getElementById(id).style.display='none'; }
+    function saveBF(){ let k=document.getElementById('bf-sup-key').value, amt=parseFloat(document.getElementById('bf-amt').value)||0; app.customers[k].txns.unshift({id:Date.now(),d:new Date(document.getElementById('bf-date').value).toLocaleDateString('en-GB'),item:document.getElementById('bf-item').value,des:document.getElementById('bf-desc').value,dr:amt,cr:0,matched:false,note:"ยอดยกมา"}); closeBFModal(); save(); renderDetail(k); renderSidebar(); }
+    function clearData(){ if(confirm("ล้างข้อมูล?")) { app={customers:{}}; save(); location.reload(); } }
+    function backupData(){ const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(app)); a.download="AR_WorkPaper.json"; a.click(); }
+    function restoreData(el){ const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{app=JSON.parse(e.target.result); save(); renderSidebar(); alert("Restore OK");}; r.readAsText(f); }
+    function fmt(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2}); }
+    
+    function exportWP() {
+        let d = [["Customer", "Date", "Invoice", "Description", "Debit", "Credit", "Audit Note"]];
+        Object.keys(app.customers).forEach(k => {
+            let s = app.customers[k];
+            let bal = s.txns.reduce((a,b)=>a+(b.dr-b.cr),0);
+            if(Math.abs(bal) > 0.01) {
+                d.push([k, "SUMMARY", "", "ยอดคงเหลือสุทธิ", "", "", bal]);
+                s.txns.filter(t=>!t.matched).forEach(t => d.push(["", t.d, t.item, t.des, t.dr, t.cr, t.note]));
+                d.push([]);
+            }
+        });
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "WorkingPaper");
+        XLSX.writeFile(wb, "AR_WorkingPaper.xlsx");
+    }
+    
+    function exportAgingExcel() {
+        let d = [["Customer", "Balance", "Current", "1-30 Days", "31-60 Days", "61-90 Days", "> 90 Days"]];
+        const tb = document.getElementById('aging-body').rows;
+        for(let i=0; i<tb.length; i++) {
+            let r = [];
+            for(let j=0; j<tb[i].cells.length; j++) r.push(tb[i].cells[j].innerText);
+            d.push(r);
+        }
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "Aging");
+        XLSX.writeFile(wb, "AR_Aging_Report.xlsx");
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Recon Pro - M Audit</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root { --primary: #1e293b; --accent: #2563eb; --bg: #f1f5f9; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+        
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 0; 
+            background: var(--bg); 
+            padding: 0; 
+            color: #334155; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        /* Main App Container */
+        #app-container { 
+            display: block; /* เปิดใช้งานทันที ไม่ต้องรอ Login ซ้อน */
+            width: 100%; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); min-height: 90vh; display: flex; flex-direction: column; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
+        .brand h1 { margin: 0; font-size: 1.5rem; color: var(--primary); }
+        
+        .tools-bar { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+        .tool-group { display: flex; flex-direction: column; gap: 5px; }
+        .tool-label { font-size: 0.85rem; font-weight: bold; color: #64748b; }
+        
+        /* Buttons */
+        .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-family: 'Sarabun'; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; white-space: nowrap; font-size: 0.9rem; text-decoration: none; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-blue { background: var(--accent); } 
+        .btn-green { background: var(--success); } 
+        .btn-gray { background: #64748b; } 
+        .btn-red { background: var(--danger); } 
+        .btn-orange { background: var(--warning); color:white; }
+        .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+
+        .mode-switch { display: flex; background: #e2e8f0; padding: 4px; border-radius: 6px; gap: 5px; }
+        .mode-opt { padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        .mode-opt.active { background: white; color: var(--accent); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .grid-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; flex: 1; }
+        .panel { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+        .panel-head { background: #f1f5f9; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .panel-body { padding: 0; overflow-y: auto; flex: 1; max-height: 700px; }
+        
+        /* Tables */
+        .report-body { padding: 25px; background: white; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { position: sticky; top: 0; background: #e2e8f0; padding: 8px; text-align: left; color: #475569; z-index: 10; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .text-right { text-align: right; }
+        .tbl-inp { width: 100%; border: none; border-bottom: 1px dashed #cbd5e1; text-align: right; font-family: 'Sarabun'; font-size: 1rem; color: var(--primary); outline: none; background: transparent; }
+        .tbl-inp:focus { border-bottom: 1px solid var(--accent); }
+        .chk-row { transform: scale(1.2); cursor: pointer; }
+        
+        .adj-table { width: 100%; margin-top: 5px; font-size: 0.85rem; }
+        .adj-table td { padding: 4px; border: none; }
+        .adj-inp { width: 100%; padding: 4px; border: 1px solid #e2e8f0; border-radius: 4px; font-family: 'Sarabun'; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 500px; border-radius: 10px; animation: slideDown 0.3s; }
+        @keyframes slideDown { from {opacity: 0; transform: translateY(-20px);} to {opacity: 1; transform: translateY(0);} }
+        .form-group { margin-bottom: 15px; } 
+        .form-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-family: 'Sarabun'; }
+
+        /* Print Styles */
+        @media print { 
+            .no-print, .tools-bar, .modal { display: none !important; } 
+            #app-container { display: block !important; padding: 0; } 
+            .container { box-shadow: none; border: none; } 
+            .grid-layout { display: block; } 
+            .panel:first-child { display: none; }
+            .print-footer { display: block !important; margin-top: 50px; border-top: 1px solid #ccc; padding-top: 20px; }
+            .tbl-inp { border: none !important; text-align: right; } 
+            .btn-del { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="container">
+        <div class="header">
+            <div class="brand">
+                <h1><i class="fas fa-university"></i> Bank Recon Pro <span style="font-size:0.6em; background:#ecfdf5; color:#047857; padding:2px 8px; border-radius:10px;">V.7 App5</span></h1>
+            </div>
+            <div class="no-print">
+                <span id="save-status" style="color:var(--success); font-size:0.9rem; opacity:0; transition:0.5s;"><i class="fas fa-check-circle"></i> บันทึกแล้ว</span>
+                <a href="../index.html" class="btn btn-gray"><i class="fas fa-arrow-left"></i> กลับ Dashboard</a>
+            </div>
+        </div>
+
+        <div class="tools-bar no-print">
+            <div class="tool-group">
+                <span class="tool-label"><i class="fas fa-cog"></i> รูปแบบการทำงาน</span>
+                <div class="mode-switch">
+                    <div class="mode-opt active" id="mode-manual" onclick="setMode('manual')">แบบที่ 1: ระบุยอดเอง (ปิดงบ)</div>
+                    <div class="mode-opt" id="mode-auto" onclick="setMode('auto')">แบบที่ 2: คำนวณยอด (Auto)</div>
+                </div>
+            </div>
+            <div style="width:1px; height:40px; background:#e2e8f0;"></div>
+            <div class="tool-group">
+                <span class="tool-label">นำเข้าข้อมูล</span>
+                <div style="display:flex; gap:5px;">
+                    <input type="file" id="f-gl" hidden onchange="importFile(this, 'gl')"><button class="btn btn-blue btn-sm" onclick="document.getElementById('f-gl').click()">GL</button>
+                    <input type="file" id="f-stmt" hidden onchange="importFile(this, 'stmt')"><button class="btn btn-green btn-sm" onclick="document.getElementById('f-stmt').click()">Stmt</button>
+                    <button class="btn btn-gray btn-sm" onclick="openModal('stmt')">คีย์</button>
+                </div>
+            </div>
+            <div class="tool-group" style="flex:1; align-items:center;">
+                <button class="btn btn-blue" style="height:38px; width:150px; justify-content:center; font-weight:bold;" onclick="autoReconcile(true)"><i class="fas fa-sync"></i> RUN CHECK</button>
+            </div>
+            <div class="tool-group" style="align-items:flex-end;">
+                <span class="tool-label" id="stat-text">Ready</span>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn btn-orange btn-sm" onclick="exportMatch()"><i class="fas fa-table"></i> รายละเอียด</button>
+                    <button class="btn btn-red btn-sm" onclick="clearData()"><i class="fas fa-trash"></i> ล้าง</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <div class="panel">
+                <div class="panel-head">
+                    <span><i class="fas fa-list-ul"></i> รายการคงค้าง (Outstanding)</span>
+                    <div class="no-print" style="display:flex; gap:5px;">
+                        <button class="btn btn-sm btn-green" onclick="manualMatch()" title="จับคู่รายการที่เลือก"><i class="fas fa-link"></i> คู่</button>
+                        <button class="btn btn-sm btn-orange" onclick="flipSign()" title="กลับเครื่องหมาย +/-"><i class="fas fa-exchange-alt"></i> +/-</button>
+                        <button class="btn btn-sm btn-red" onclick="deleteSelected()" title="ลบรายการ"><i class="fas fa-trash"></i> ลบ</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <table id="tbl-diff">
+                        <thead><tr><th width="30" class="no-print"><input type="checkbox" onchange="toggleAll(this)"></th><th>วันที่</th><th>รายการ</th><th class="text-right">จำนวนเงิน</th><th>สถานะ</th></tr></thead>
+                        <tbody id="tbody-diff"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <span><i class="fas fa-file-invoice-dollar"></i> งบพิสูจน์ยอด (Recon)</span>
+                    <button class="btn btn-green btn-sm no-print" onclick="exportReport()"><i class="fas fa-file-excel"></i> Excel</button>
+                </div>
+                <div class="report-body" id="report-area">
+                    <div style="text-align:center; margin-bottom:15px;">
+                        <h3 style="margin:0; color:var(--primary);">งบพิสูจน์ยอดเงินฝากธนาคาร</h3>
+                        <div style="color:#64748b; font-size:0.9em;">ณ วันที่ <span id="rpt-date">...</span></div>
+                    </div>
+                    <table style="width:100%;">
+                        <tr>
+                            <td colspan="2"><strong>ยอดคงเหลือตามธนาคาร (Bank Statement)</strong></td>
+                            <td class="text-right"><input type="number" class="tbl-inp" id="inp-bal-stmt" onchange="updBal('stmt',this.value)" placeholder="0.00"></td>
+                        </tr>
+                        <tr><td colspan="3" style="font-size:0.8em; color:#aaa; padding-top:5px;">บวก/หัก: รายการกระทบยอด</td></tr>
+                        <tr><td style="color:var(--danger);"><i class="fas fa-minus-circle"></i> หัก: เช็คจ่ายยังไม่ขึ้นเงิน (O/S Cheque)</td><td class="text-right" id="val-os-chk" style="color:var(--danger);">0.00</td><td></td></tr>
+                        <tr><td style="color:var(--success);"><i class="fas fa-plus-circle"></i> บวก: เงินฝากระหว่างทาง (Dep. Transit)</td><td class="text-right" id="val-dep-tran" style="color:var(--success);">0.00</td><td></td></tr>
+                        <tr style="background:#f0f9ff;"><td colspan="2" style="font-weight:bold; color:var(--primary); padding:10px;">ยอดคงเหลือที่ถูกต้อง (Adjusted Bank)</td><td class="text-right" style="font-weight:bold; font-size:1.1em; border-bottom:3px double var(--primary);" id="val-adj-bal">0.00</td></tr>
+                        <tr><td colspan="3" style="height:20px;"></td></tr>
+                        <tr>
+                            <td colspan="2">
+                                <strong>ยอดคงเหลือตามบัญชี (GL Balance)</strong>
+                                <div id="mode-badge" style="font-size:0.7em; display:inline-block; background:#eee; padding:2px 6px; border-radius:4px; margin-left:5px;">Manual Input</div>
+                            </td>
+                            <td class="text-right">
+                                <input type="number" class="tbl-inp" id="inp-bal-gl" onchange="updBal('gl',this.value)" placeholder="0.00">
+                                <span id="txt-bal-gl" style="display:none; font-weight:bold;">0.00</span>
+                            </td>
+                        </tr>
+                        <tr><td colspan="3">
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; margin-top:10px;">
+                                <span style="font-size:0.9em; font-weight:bold; color:#475569;">รายการปรับปรุง (GL Adjustments)</span>
+                                <button class="btn btn-sm btn-gray no-print" onclick="addAdjRow()" style="font-size:0.7em;">+ เพิ่มรายการ</button>
+                            </div>
+                            <div id="adj-container"></div>
+                        </td></tr>
+                        <tr><td colspan="2" style="color:#64748b; font-size:0.85em;">บวก/หัก: รายการใน Bank ที่ยังไม่ลง GL (Auto)</td><td class="text-right" id="val-bank-items" style="font-size:0.85em;">0.00</td></tr>
+                        <tr style="background:#fff7ed;"><td colspan="2" style="font-weight:bold; padding:10px;">ผลต่าง (Diff) <span style="font-weight:normal; font-size:0.8em; color:#999;">(ควรเป็น 0.00)</span></td><td class="text-right" id="val-diff" style="font-weight:bold; font-size:1.2em;">0.00</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="entryModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">บันทึกรายการด้วยมือ</h3>
+        <input type="hidden" id="ent-type">
+        <div class="form-group"><label>วันที่</label><input type="date" id="ent-date" class="form-input"></div>
+        <div class="form-group"><label>รายการ</label><input type="text" id="ent-desc" class="form-input"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group"><label style="color:var(--danger)">ถอน/จ่าย (-)</label><input type="number" id="ent-wd" class="form-input" placeholder="0.00"></div>
+            <div class="form-group"><label style="color:var(--success)">ฝาก/รับ (+)</label><input type="number" id="ent-dep" class="form-input" placeholder="0.00"></div>
+        </div>
+        <div style="text-align:right;"><button class="btn btn-gray" onclick="closeModal()">ยกเลิก</button> <button class="btn btn-blue" onclick="saveEntry()">บันทึก</button></div>
+    </div>
+</div>
+
+<div class="print-footer" style="display:none;">
+    <table style="width:100%; text-align:center; border:none;">
+        <tr>
+            <td style="border:none; width:33%;">__________________________<br>( ........................................ )<br><span style="font-size:0.8rem;">ผู้จัดทำ (Preparer)</span><br>วันที่ ...../...../..........</td>
+            <td style="border:none; width:33%;">__________________________<br>( ........................................ )<br><span style="font-size:0.8rem;">ผู้ตรวจสอบ (Reviewer)</span><br>วันที่ ...../...../..........</td>
+            <td style="border:none; width:33%;">__________________________<br>( ........................................ )<br><span style="font-size:0.8rem;">ผู้อนุมัติ (Approver)</span><br>วันที่ ...../...../..........</td>
+        </tr>
+    </table>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+    // TODO: เมื่อต้องการบันทึกข้อมูลลง Cloud ให้ import firestore เพิ่มตรงนี้
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyAMwa2H7l6rYiEmGPAPq2zMDEZilrzuwyE",
+        authDomain: "macc-audit.firebaseapp.com",
+        projectId: "macc-audit",
+        storageBucket: "macc-audit.firebasestorage.app",
+        messagingSenderId: "288410696416",
+        appId: "1:288410696416:web:f102c45ef70fc42ef4ee85",
+        measurementId: "G-NL8PYY1GTL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    console.log("Firebase initialized in Recon Bank module.");
+</script>
+
+<script>
+    // --- APP LOGIC ---
+    let app = { gl:[], stmt:[], adj:[], balGL:0, balStmt:0, mode:'manual' };
+
+    window.onload = () => {
+        // โหลดข้อมูลจาก LocalStorage (ในอนาคตจะเปลี่ยนเป็นโหลดจาก Firebase Firestore)
+        const s = localStorage.getItem('audit_bank_v7');
+        if(s) app = {...app, ...JSON.parse(s)};
+        if(!app.adj) app.adj = [];
+        renderUI();
+    };
+
+    function save() { 
+        localStorage.setItem('audit_bank_v7', JSON.stringify(app)); 
+        const s=document.getElementById('save-status'); s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1500); 
+    }
+
+    function setMode(m) {
+        app.mode = m;
+        document.getElementById('mode-manual').className = `mode-opt ${m=='manual'?'active':''}`;
+        document.getElementById('mode-auto').className = `mode-opt ${m=='auto'?'active':''}`;
+        renderUI();
+    }
+
+    function autoReconcile(notify=true) {
+        if(!app.gl.length || !app.stmt.length) { if(notify)alert("ข้อมูลไม่ครบ กรุณา Import GL และ Statement ก่อน"); return; }
+        // Reset check status
+        app.gl.forEach(x=>x.chk=false); app.stmt.forEach(x=>x.chk=false);
+        
+        let m=0;
+        // Simple matching logic (Amount match)
+        app.gl.forEach(g=>{
+            // Find in statement where amount is same and not checked
+            let f = app.stmt.find(s=>!s.chk && Math.abs(s.val - g.val) < 0.05);
+            if(f) { g.chk=true; f.chk=true; m++; }
+        });
+        
+        if(app.mode === 'auto') app.balGL = app.gl.reduce((sum, x) => sum + x.val, 0);
+        save(); renderUI();
+        if(notify) alert(`ระบบจับคู่ยอดตรงกันได้ทั้งหมด ${m} รายการ`);
+    }
+
+    function addAdjRow() { app.adj.push({ desc: "", val: 0 }); save(); renderUI(); }
+    function updAdj(idx, key, val) { app.adj[idx][key] = (key==='val') ? parseFloat(val)||0 : val; save(); renderUI(); }
+    function delAdj(idx) { app.adj.splice(idx, 1); save(); renderUI(); }
+
+    function importFile(el, type) {
+        const f = el.files[0]; if(!f) return;
+        const r = new FileReader();
+        if(f.name.toLowerCase().endsWith('.csv')) {
+            r.readAsText(f, 'windows-874');
+            r.onload = e => {
+                if(e.target.result.includes('วันที่')||e.target.result.includes('Date')) parseRows(e.target.result, type);
+                else { const r2=new FileReader(); r2.readAsText(f,'utf-8'); r2.onload=e2=>parseRows(e2.target.result, type); }
+            };
+        } else {
+            r.readAsArrayBuffer(f);
+            r.onload = e => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+                processJson(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1}), type);
+            };
+        }
+        el.value = '';
+    }
+    
+    function parseRows(txt, type) { processJson(XLSX.utils.sheet_to_json(XLSX.read(txt,{type:'string'}).Sheets['Sheet1'], {header:1}), type); }
+    
+    function processJson(rows, type) {
+        let hIdx=-1, col={d:-1, des:-1, dr:-1, cr:-1, w:-1, dep:-1, val:-1};
+        // Detect Header Row
+        for(let i=0; i<Math.min(rows.length,30); i++) {
+            let r = rows[i].map(x=>String(x).toLowerCase());
+            if(r.some(x=>x.includes('วันที่')||x.includes('date'))) {
+                hIdx=i;
+                r.forEach((c,k)=>{
+                    if(c.includes('วันที่')||c.includes('date')) col.d=k;
+                    else if(c.includes('รายการ')||c.includes('คำอธิบาย')||c.includes('desc')) col.des=k;
+                    else if(c.includes('เดบิต')||c.includes('debit')) col.dr=k;
+                    else if(c.includes('เครดิต')||c.includes('credit')) col.cr=k;
+                    else if(c.includes('ถอน')||c.includes('withdraw')) col.w=k;
+                    else if(c.includes('ฝาก')||c.includes('deposit')) col.dep=k;
+                    else if(c.includes('จำนวน')||c.includes('amount')) col.val=k;
+                }); break;
+            }
+        }
+        if(hIdx===-1){ alert("ไม่พบหัวตาราง (ต้องมีคำว่า วันที่/Date)"); return; }
+        
+        let n=[];
+        for(let i=hIdx+1; i<rows.length; i++) {
+            let row=rows[i]; if(!row[col.d]) continue;
+            let dRaw=row[col.d], dStr=String(dRaw);
+            
+            // Skip invalid dates
+            if(dStr.includes('-') && !dStr.match(/\d/)) continue;
+            
+            // Date Formatting
+            if(typeof dRaw==='number') dStr=new Date((dRaw-25569)*864e5).toLocaleDateString('en-GB');
+            else if(dStr.match(/^\d{4}-\d{2}-\d{2}$/)) { let p=dStr.split('-'); if(p[0]>2400)p[0]-=543; dStr=`${p[2]}/${p[1]}/${p[0]}`; }
+            else if(dStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) { let p=dStr.split('/'); if(p[2]>2400)p[2]-=543; dStr=`${p[0]}/${p[1]}/${p[2]}`; }
+            
+            let desc = col.des>-1 ? row[col.des]||"" : "", v=0;
+            
+            // Amount Calculation
+            if(col.dr>-1 && col.cr>-1) { 
+                let dr=parseFloat(String(row[col.dr]||0).replace(/,/g,''))||0; 
+                let cr=parseFloat(String(row[col.cr]||0).replace(/,/g,''))||0; 
+                v = dr>0 ? dr : (cr*-1); 
+            }
+            else if(col.w>-1 && col.dep>-1) { 
+                let w=parseFloat(String(row[col.w]||0).replace(/,/g,''))||0; 
+                let d=parseFloat(String(row[col.dep]||0).replace(/,/g,''))||0; 
+                v = d>0 ? d : (w*-1); 
+            }
+            else if(col.val>-1) v=parseFloat(String(row[col.val]||0).replace(/,/g,''))||0;
+            
+            if(v!==0) n.push({d:dStr, des:desc, val:v, chk:false});
+        }
+        
+        if(type==='gl') app.gl=n; else app.stmt=n;
+        save(); renderUI(); alert(`Import ข้อมูลสำเร็จ ${n.length} รายการ`);
+    }
+
+    function manualMatch() {
+        let g=document.querySelectorAll('.chk-gl:checked'), s=document.querySelectorAll('.chk-stmt:checked');
+        if(!g.length && !s.length) return alert("กรุณาเลือกรายการที่จะจับคู่");
+        g.forEach(e=>app.gl[e.value].chk=true); s.forEach(e=>app.stmt[e.value].chk=true);
+        save(); renderUI();
+    }
+    
+    function flipSign() {
+        let g=document.querySelectorAll('.chk-gl:checked'), s=document.querySelectorAll('.chk-stmt:checked');
+        g.forEach(e=>app.gl[e.value].val*=-1); s.forEach(e=>app.stmt[e.value].val*=-1);
+        save(); renderUI();
+    }
+    
+    function deleteSelected() {
+        if(!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการที่เลือก?")) return;
+        let g=Array.from(document.querySelectorAll('.chk-gl:checked')).map(e=>parseInt(e.value)).sort((a,b)=>b-a);
+        let s=Array.from(document.querySelectorAll('.chk-stmt:checked')).map(e=>parseInt(e.value)).sort((a,b)=>b-a);
+        g.forEach(i=>app.gl.splice(i,1)); s.forEach(i=>app.stmt.splice(i,1));
+        save(); renderUI();
+    }
+    
+    function updBal(t,v) { if(t==='gl') app.balGL=parseFloat(v)||0; else app.balStmt=parseFloat(v)||0; save(); renderUI(); }
+    
+    function clearData() { 
+        if(confirm("คำเตือน: ข้อมูลทั้งหมดจะถูกลบ! ยืนยันหรือไม่?")){ 
+            app={gl:[],stmt:[],adj:[],balGL:0,balStmt:0,mode:'manual'}; 
+            save(); renderUI(); 
+        } 
+    }
+
+    function openModal(t) { document.getElementById('entryModal').style.display='block'; document.getElementById('ent-type').value=t; }
+    function closeModal() { document.getElementById('entryModal').style.display='none'; }
+    
+    function saveEntry() {
+        let t=document.getElementById('ent-type').value, d=document.getElementById('ent-date').value, 
+            wd=parseFloat(document.getElementById('ent-wd').value)||0, dep=parseFloat(document.getElementById('ent-dep').value)||0;
+        if(!d || (wd==0 && dep==0)) return alert("กรุณาระบุข้อมูลให้ครบถ้วน");
+        let v = wd>0 ? -wd : dep;
+        // Convert date to DD/MM/YYYY
+        let dObj = new Date(d);
+        let dStr = `${dObj.getDate()}/${dObj.getMonth()+1}/${dObj.getFullYear()}`;
+        
+        let item = { d:dStr, des:document.getElementById('ent-desc').value+" [Manual]", val:v, chk:false };
+        if(t==='gl') app.gl.push(item); else app.stmt.push(item);
+        closeModal(); save(); renderUI();
+    }
+
+    function renderUI() {
+        document.getElementById('stat-text').innerText=`GL: ${app.gl.length} | Stmt: ${app.stmt.length}`;
+        const inpGL = document.getElementById('inp-bal-gl');
+        const txtGL = document.getElementById('txt-bal-gl');
+        const badge = document.getElementById('mode-badge');
+        
+        if(app.mode === 'manual') {
+            inpGL.style.display = 'block'; inpGL.value = app.balGL; txtGL.style.display = 'none';
+            badge.innerText = "Manual Input"; badge.style.color = "#475569";
+        } else {
+            inpGL.style.display = 'none'; txtGL.style.display = 'block'; txtGL.innerText = fmt(app.balGL);
+            badge.innerText = "Auto Calculated"; badge.style.color = "#2563eb";
+        }
+        document.getElementById('inp-bal-stmt').value = app.balStmt;
+
+        const tb = document.getElementById('tbody-diff'); tb.innerHTML='';
+        let os=0, dep=0, bd=0;
+        
+        // Render Unchecked GL
+        app.gl.forEach((x,i)=>{ if(!x.chk){
+            if(x.val<0) os+=x.val; else dep+=x.val;
+            tb.innerHTML+=`<tr><td class="no-print"><input type="checkbox" class="chk-gl" value="${i}"></td><td>${x.d}</td><td>${x.des} <small style="color:#aaa">(GL)</small></td><td class="text-right" style="color:${x.val<0?'red':'green'}">${fmt(x.val)}</td><td>${x.val<0?'O/S Chk':'Dep Tran'}</td></tr>`;
+        }});
+        
+        // Render Unchecked Stmt
+        app.stmt.forEach((x,i)=>{ if(!x.chk){
+            bd+=x.val;
+            tb.innerHTML+=`<tr><td class="no-print"><input type="checkbox" class="chk-stmt" value="${i}"></td><td>${x.d}</td><td>${x.des} <small style="color:#2563eb">(Bank)</small></td><td class="text-right">${fmt(x.val)}</td><td>Bank Item</td></tr>`;
+        }});
+
+        const adjCon = document.getElementById('adj-container'); adjCon.innerHTML = '';
+        let adjTotal = 0;
+        app.adj.forEach((a, i) => {
+            adjTotal += a.val;
+            adjCon.innerHTML += `<table class="adj-table"><tr><td width="50%"><input class="adj-inp" value="${a.desc}" placeholder="รายการ..." onchange="updAdj(${i},'desc',this.value)"></td><td width="30%"><input type="number" class="adj-inp text-right" value="${a.val}" onchange="updAdj(${i},'val',this.value)"></td><td width="20%" class="text-right no-print"><button class="btn-del" onclick="delAdj(${i})" style="color:red; border:none; background:none; cursor:pointer;">x</button></td></tr></table>`;
+        });
+
+        document.getElementById('val-os-chk').innerText = fmt(os);
+        document.getElementById('val-dep-tran').innerText = fmt(dep);
+        
+        let adjBank = app.balStmt + dep + os;
+        document.getElementById('val-adj-bal').innerText = fmt(adjBank);
+        document.getElementById('val-bank-items').innerText = fmt(bd);
+        
+        let diff = adjBank - (app.balGL + bd + adjTotal);
+        let elD = document.getElementById('val-diff'); elD.innerText = fmt(diff); 
+        elD.style.color = Math.abs(diff)<0.05 ? '#10b981' : '#ef4444';
+        
+        let dts=[...app.gl.map(x=>x.d), ...app.stmt.map(x=>x.d)];
+        document.getElementById('rpt-date').innerText = dts.length ? dts.sort().pop() : "-";
+    }
+
+    function fmt(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function toggleAll(el) { document.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=el.checked); }
+    
+    function exportReport() {
+        let d=[["งบพิสูจน์ยอด"], ["Bank Balance", app.balStmt], ["- O/S Cheque", document.getElementById('val-os-chk').innerText], ["+ Dep Transit", document.getElementById('val-dep-tran').innerText], ["Adjusted Bank", document.getElementById('val-adj-bal').innerText], [""], ["GL Balance", app.balGL]];
+        app.adj.forEach(a=>d.push(["Adj: "+a.desc, a.val]));
+        d.push(["+ Bank Items", document.getElementById('val-bank-items').innerText], ["Diff", document.getElementById('val-diff').innerText]);
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "Recon"); XLSX.writeFile(wb, "Recon_Report.xlsx");
+    }
+    
+    function exportMatch() {
+        let d=[["Status","Date","Desc","GL","Bank"]];
+        app.gl.filter(x=>!x.chk).forEach(x=>d.push(["Unmatched GL",x.d,x.des,x.val,""]));
+        app.stmt.filter(x=>!x.chk).forEach(x=>d.push(["Unmatched Bank",x.d,x.des,"",x.val]));
+        app.gl.filter(x=>x.chk).forEach(x=>d.push(["Matched",x.d,x.des,x.val,x.val]));
+        const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(d);
+        XLSX.utils.book_append_sheet(wb, ws, "Details"); XLSX.writeFile(wb, "Match_Detail.xlsx");
+    }
+</script>
+</body>
+</html>
