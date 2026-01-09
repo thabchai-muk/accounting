@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tax & Other Audit - M Audit System</title>
+    <title>Tax & Other Audit - M Audit System (Fixed V2)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -12,14 +12,14 @@
         :root { --primary: #1e3a8a; --accent: #3b82f6; --bg: #f8fafc; --warn: #f59e0b; --danger: #ef4444; --success: #10b981; }
         body { font-family: 'Sarabun', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; font-size: 14px; color: #334155; }
         
+        /* Layout */
         .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
         .brand { padding: 25px; text-align: center; background: rgba(0,0,0,0.2); }
         .menu-item { padding: 10px 25px; cursor: pointer; display: flex; align-items: center; border-left: 4px solid transparent; color: #dbeafe; transition: 0.2s; }
         .menu-item:hover { background: rgba(255,255,255,0.1); }
         .menu-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--accent); color: white; font-weight: 600; }
         .menu-group { font-size: 0.75rem; color: #93c5fd; padding: 15px 25px 5px; text-transform: uppercase; font-weight: bold; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .menu-item i { width: 25px; font-size: 1.1em; text-align: center; margin-right: 10px; }
-
+        
         .main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; height: 100%; }
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
@@ -27,34 +27,38 @@
         .page-section.active { display: flex; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* Tabs */
         .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; gap: 2px; }
         .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #f8fafc; font-weight: 600; color: #64748b; border-radius: 8px 8px 0 0; transition: 0.2s; }
         .tab-btn.active { background: white; color: var(--primary); border-top: 3px solid var(--accent); border-bottom: 2px solid white; margin-bottom: -2px; }
         .tab-content { display: none; height: 100%; flex-direction: column; }
         .tab-content.active { display: flex; }
 
+        /* Table */
         .table-container { flex: 1; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
         table { width: 100%; border-collapse: collapse; font-size: 0.9em; min-width: 800px; }
         th { background: #f8fafc; padding: 10px; position: sticky; top: 0; text-align: center; border-bottom: 2px solid #e2e8f0; color: #475569; z-index: 10; white-space: nowrap; font-weight: 600; }
         td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
-        input.tbl-inp { width: 100%; background: transparent; border: 1px solid transparent; text-align: right; font-family: 'Sarabun'; padding: 4px; border-radius: 4px; font-size: 0.9em; }
-        input.tbl-inp:focus { border: 1px solid #cbd5e1; background: white; outline: none; }
         
-        /* FOOTER TOTAL ROW */
+        input.tbl-inp { width: 100%; background: transparent; border: 1px solid transparent; text-align: right; font-family: 'Sarabun'; padding: 4px; border-radius: 4px; font-size: 0.9em; box-sizing: border-box; }
+        input.tbl-inp:focus { border: 1px solid #cbd5e1; background: #fffbeb; outline: none; }
+        
         tfoot tr { background-color: #ecfeff; font-weight: bold; color: #0e7490; position: sticky; bottom: 0; z-index: 10; border-top: 2px solid #bae6fd; }
-        tfoot td { text-align: right; padding: 10px; }
+        tfoot td { text-align: right; padding: 10px; border-top: 2px solid #bae6fd; }
 
+        /* Buttons */
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; font-family: 'Sarabun'; transition: 0.2s; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-add { background: var(--accent); }
         .btn-save { background: var(--warn); width: 100%; justify-content: center; padding: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px;}
         .btn-import { background: #8b5cf6; }
         .btn-excel { background: var(--success); }
-        .btn-del { background: var(--danger); padding: 4px 8px; font-size: 0.7em; }
+        .btn-del { background: var(--danger); padding: 4px 8px; font-size: 0.7em; border-radius: 3px; color: white; border: none; cursor: pointer;}
         .btn-gray { background: #64748b; }
-        .btn-back { background: rgba(255,255,255,0.2); width: 100%; justify-content: center; margin-top: 10px; color: white; text-decoration: none; display: flex; }
+        .btn-back { background: rgba(255,255,255,0.2); width: 100%; justify-content: center; margin-top: 10px; color: white; text-decoration: none; display: flex; padding: 10px; border-radius: 4px;}
         .btn-back:hover { background: rgba(255,255,255,0.3); }
 
+        /* Specific Sections */
         .cit-section { margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; background: #fff; }
         .cit-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.95em; }
         .cit-row input { width: 120px; text-align: right; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: 'Sarabun'; }
@@ -66,6 +70,14 @@
         .cust-item:hover { background: #f0f9ff; }
         .cust-item.active { background: #e0f2fe; border-left: 4px solid var(--primary); }
 
+        /* Utility Classes */
+        .text-right { text-align: right !important; }
+        .center { text-align: center !important; }
+        .font-bold { font-weight: bold; }
+        .mb-2 { margin-bottom: 8px; }
+        .mt-2 { margin-top: 8px; }
+        .w-full { width: 100%; }
+
         @media print { .sidebar, .no-print { display: none !important; } .card { border: none; box-shadow: none; } }
     </style>
 </head>
@@ -74,7 +86,7 @@
 <nav class="sidebar">
     <div class="brand">
         <h3><i class="fas fa-chart-line"></i> M-Audit Pro</h3>
-        <small>Tax & Other Module</small>
+        <small>Tax & Other (Final)</small>
     </div>
     <div class="menu-group">Tax & Revenue</div>
     <div class="menu-item active" onclick="navTo('page-vat', this)"><i class="fas fa-percent"></i> ภาษีมูลค่าเพิ่ม (ภ.พ.30)</div>
@@ -88,7 +100,8 @@
     <div class="menu-item" onclick="navTo('page-cit', this)"><i class="fas fa-balance-scale"></i> ภ.ง.ด.50 (CIT)</div>
     <div style="padding: 20px; margin-top: auto;">
         <button class="btn btn-save" onclick="manualSave()"><i class="fas fa-save"></i> บันทึกข้อมูล</button>
-        <a href="../index.html" class="btn-back"><i class="fas fa-arrow-left"></i> กลับหน้าหลัก</a>
+        <button class="btn btn-excel" style="width:100%; justify-content:center; margin-top:5px; background:#059669;" onclick="exportAllData()"><i class="fas fa-file-export"></i> Export All Data</button>
+        <a href="#" class="btn-back"><i class="fas fa-arrow-left"></i> กลับหน้าหลัก</a>
         <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
             <button class="btn btn-import" style="width:100%; justify-content:center;" onclick="backupData()"><i class="fas fa-download"></i> สำรองข้อมูล</button>
             <input type="file" id="resFile" style="display:none;" onchange="restoreData(this)">
@@ -102,7 +115,7 @@
 
     <div id="page-vat" class="page-section active">
         <div class="card">
-            <div class="header-row"><h3>ภาษีมูลค่าเพิ่ม & รายได้</h3></div>
+            <div class="header-row"><h3>ภาษีมูลค่าเพิ่ม & รายได้</h3><button class="btn btn-excel" onclick="exportPP30()">Export PP30</button></div>
             <div class="tabs no-print">
                 <button class="tab-btn active" onclick="setTab(this, 'vat-pp30')">1. ยื่นแบบ ภ.พ.30</button>
                 <button class="tab-btn" onclick="setTab(this, 'vat-recon')">2. พิสูจน์ยอดรายได้</button>
@@ -112,11 +125,7 @@
             <div id="vat-pp30" class="tab-content active">
                 <div class="no-print mb-2"><button class="btn btn-add" onclick="addPP30Row()">+ เพิ่มแถว</button></div>
                 <div class="table-container" style="flex:none; height:400px;">
-                    <table>
-                        <thead><tr><th class="no-print">Del</th><th>เดือน / ครั้งที่</th><th>ยอดขาย</th><th>ภาษีขาย</th><th>ยอดซื้อ</th><th>ภาษีซื้อ</th><th>ชำระ/(คืน)</th><th style="background:#f0fdf4;">วันที่ชำระ</th><th style="background:#f0fdf4;">เลขที่ใบเสร็จ</th></tr></thead>
-                        <tbody id="tb-pp30"></tbody>
-                        <tfoot id="tf-pp30"></tfoot>
-                    </table>
+                    <table><thead><tr><th class="no-print">Del</th><th>เดือน / ครั้งที่</th><th>ยอดขาย</th><th>ภาษีขาย</th><th>ยอดซื้อ</th><th>ภาษีซื้อ</th><th>ชำระ/(คืน)</th><th>วันที่ชำระ</th><th>เลขที่ใบเสร็จ</th></tr></thead><tbody id="tb-pp30"></tbody><tfoot id="tf-pp30"></tfoot></table>
                 </div>
                 <div style="margin-top:10px;"><label><strong>Audit Note:</strong></label><textarea id="vat-note" style="width:100%; height:80px; border:1px solid #ccc; border-radius:4px; padding:10px; margin-top:5px;" onchange="saveVatNote()"></textarea></div>
             </div>
@@ -136,7 +145,7 @@
                     <div class="bank-col" style="padding:15px; overflow-y:auto;">
                         <h3 id="def-title" style="margin:0 0 10px 0; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">กรุณาเลือกรายชื่อ</h3>
                         <div id="def-bf-box" style="display:none; background:#fffbeb; padding:10px; margin-bottom:10px; border:1px solid #fcd34d; border-radius:4px; align-items:center; gap:10px;">
-                            <label style="font-weight:bold; color:#92400e;">ยอดยกมา (B/F):</label><input type="number" id="inp-def-bf" class="tbl-inp" style="width:150px; background:white; text-align:right; border:1px solid #ccc;" placeholder="0.00" onchange="saveDefBF()">
+                            <label style="font-weight:bold; color:#92400e;">ยอดยกมา (B/F):</label><input type="text" id="inp-def-bf" class="tbl-inp" style="width:150px; background:white; text-align:right; border:1px solid #ccc;" placeholder="0.00" onfocus="rmCom(this)" onblur="saveDefBF()">
                         </div>
                         <div id="def-detail"></div>
                     </div>
@@ -147,7 +156,7 @@
 
     <div id="page-wht" class="page-section">
         <div class="card full-height">
-            <div class="header-row"><h3>หัก ณ ที่จ่าย (WHT)</h3><button class="btn btn-excel" onclick="exportToExcel('tbl-wht', 'WHT')">Export</button></div>
+            <div class="header-row"><h3>หัก ณ ที่จ่าย (WHT)</h3><button class="btn btn-excel" onclick="exportWHT()">Export WHT</button></div>
             <div class="tabs no-print">
                 <button class="tab-btn active" onclick="setWHTTab(this, 'pnd1')">ภ.ง.ด.1</button>
                 <button class="tab-btn" onclick="setWHTTab(this, 'pnd3')">ภ.ง.ด.3</button>
@@ -159,50 +168,110 @@
 
     <div id="page-sso" class="page-section">
         <div class="card">
-            <div class="header-row"><h3>ประกันสังคม (สปส.1-10)</h3><div class="no-print"><input type="file" id="f-sso" hidden onchange="impUniv(this, 'sso')"><button class="btn btn-import" onclick="document.getElementById('f-sso').click()">Import CSV</button></div></div>
+            <div class="header-row"><h3>ประกันสังคม (สปส.1-10)</h3><div><button class="btn btn-excel" onclick="exportSSO()">Export SSO</button><input type="file" id="f-sso" hidden onchange="impUniv(this, 'sso')"><button class="btn btn-import" onclick="document.getElementById('f-sso').click()">Import CSV</button></div></div>
             <div class="table-container" id="tb-sso-wrap"><table><thead><tr style="background:#e0f2fe;"><th>เดือน</th><th>คน</th><th>ค่าจ้างรวม</th><th>หัก พนง.</th><th>นายจ้างสมทบ</th><th>รวมนำส่ง</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-sso"></tbody><tfoot id="tf-sso"></tfoot></table></div>
         </div>
         <div class="card mt-2"><div class="header-row"><h3>กท.20</h3><button class="btn btn-add" onclick="addKT20()">+ เพิ่ม</button></div><div class="table-container"><table><thead><tr style="background:#ecfccb;"><th>Del</th><th>ปี</th><th>คน</th><th>ค่าจ้างทั้งปี</th><th>เงินสมทบ</th><th>วันที่จ่าย</th></tr></thead><tbody id="tb-kt20"></tbody><tfoot id="tf-kt20"></tfoot></table></div></div>
     </div>
 
-    <div id="page-assets" class="page-section"><div class="card"><div class="header-row"><h3>ทะเบียนทรัพย์สิน</h3><div class="no-print"><input type="file" id="f-asset" hidden onchange="impUniv(this, 'asset')"><button class="btn btn-import" onclick="document.getElementById('f-asset').click()">Import</button> <button class="btn btn-add" onclick="addAsset()">+ เพิ่ม</button> <button class="btn btn-excel" onclick="exportToExcel('tb-asset-wrap', 'Assets')">Export</button></div></div><div class="table-container" id="tb-asset-wrap"><table><thead><tr style="background:#ecfdf5;"><th>Del</th><th>ชื่อทรัพย์สิน</th><th>วันที่ซื้อ</th><th>ราคาทุน</th><th>Rate(%)</th><th>สะสมยกมา</th><th>ค่าเสื่อมปีนี้</th><th>สะสมยกไป</th><th>NBV</th></tr></thead><tbody id="tb-assets"></tbody><tfoot id="tf-assets"></tfoot></table></div></div></div>
+    <div id="page-assets" class="page-section"><div class="card"><div class="header-row"><h3>ทะเบียนทรัพย์สิน</h3><div><button class="btn btn-excel" onclick="exportAssets()">Export Assets</button><input type="file" id="f-asset" hidden onchange="impUniv(this, 'asset')"><button class="btn btn-import" onclick="document.getElementById('f-asset').click()">Import</button> <button class="btn btn-add" onclick="addAsset()">+ เพิ่ม</button></div></div><div class="table-container" id="tb-asset-wrap"><table><thead><tr style="background:#ecfdf5;"><th>Del</th><th>ชื่อทรัพย์สิน</th><th>วันที่ซื้อ</th><th>ราคาทุน</th><th>Rate(%)</th><th>สะสมยกมา</th><th>ค่าเสื่อมปีนี้</th><th>สะสมยกไป</th><th>NBV</th></tr></thead><tbody id="tb-assets"></tbody><tfoot id="tf-assets"></tfoot></table></div></div></div>
     
-    <div id="page-oca" class="page-section"><div class="card"><div class="header-row"><h3>สินทรัพย์หมุนเวียนอื่น</h3><div class="no-print"><button class="btn btn-add" onclick="addOC(1)">+ เพิ่ม</button></div></div><div class="table-container" id="tb-oca-wrap"><table><thead><tr style="background:#cffafe;"><th>Del</th><th>วันที่</th><th>รายการ</th><th>จำนวนเงิน</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-oca"></tbody><tfoot id="tf-oca"></tfoot></table></div></div></div>
+    <div id="page-oca" class="page-section"><div class="card"><div class="header-row"><h3>สินทรัพย์หมุนเวียนอื่น</h3><div><button class="btn btn-excel" onclick="exportOther()">Export Other</button><button class="btn btn-add" onclick="addOC(1)">+ เพิ่ม</button></div></div><div class="table-container" id="tb-oca-wrap"><table><thead><tr style="background:#cffafe;"><th>Del</th><th>วันที่</th><th>รายการ</th><th>จำนวนเงิน</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-oca"></tbody><tfoot id="tf-oca"></tfoot></table></div></div></div>
     <div id="page-ocl" class="page-section"><div class="card"><div class="header-row"><h3>หนี้สินหมุนเวียนอื่น</h3><div class="no-print"><button class="btn btn-add" onclick="addOC(2)">+ เพิ่ม</button></div></div><div class="table-container" id="tb-ocl-wrap"><table><thead><tr style="background:#fae8ff;"><th>Del</th><th>วันที่</th><th>รายการ</th><th>จำนวนเงิน</th><th>หมายเหตุ</th></tr></thead><tbody id="tb-ocl"></tbody><tfoot id="tf-ocl"></tfoot></table></div></div></div>
 
-    <div id="page-cit" class="page-section"><div class="card h-auto"><div class="header-row"><h3>ภ.ง.ด.50 Calculation</h3></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="cit-section"><div class="cit-head">1. ปรับปรุงกำไรสุทธิ</div><div class="cit-row"><label>กำไรทางบัญชี</label><input type="number" id="cit_net" onchange="calcCIT()"></div><div class="cit-head">บวกกลับ</div><div class="cit-row"><label>รายจ่ายต้องห้าม</label><input type="number" id="cit_add1" onchange="calcCIT()"></div><div class="cit-row"><label>ค่ารับรองส่วนเกิน</label><input type="number" id="cit_add2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="number" id="cit_add3" onchange="calcCIT()"></div><div class="cit-head">หักออก</div><div class="cit-row"><label>รายได้ยกเว้น</label><input type="number" id="cit_ded1" onchange="calcCIT()"></div><div class="cit-row"><label>หักได้เพิ่ม</label><input type="number" id="cit_ded2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="number" id="cit_ded3" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>กำไรทางภาษี</label><span id="cit_tax_profit">0.00</span></div></div><div class="cit-section"><div class="cit-head">2. คำนวณภาษี</div><div class="cit-row"><label>Rate (%)</label><input type="number" id="cit_rate" value="20" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีที่ต้องชำระ</label><span id="cit_amount" class="font-bold">0.00</span></div><div class="cit-head">เครดิตภาษี</div><div class="cit-row"><label>หัก ณ ที่จ่าย</label><input type="number" id="cit_wht" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีครึ่งปี</label><input type="number" id="cit_half" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>ชำระ/(คืน)</label><span id="cit_net_pay" style="font-size:1.2em;">0.00</span></div></div></div></div></div>
+    <div id="page-cit" class="page-section"><div class="card h-auto"><div class="header-row"><h3>ภ.ง.ด.50 Calculation</h3><button class="btn btn-excel" onclick="exportCIT()">Export CIT</button></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div class="cit-section"><div class="cit-head">1. ปรับปรุงกำไรสุทธิ</div><div class="cit-row"><label>กำไรทางบัญชี</label><input type="text" id="cit_net" onchange="calcCIT()"></div><div class="cit-head">บวกกลับ</div><div class="cit-row"><label>รายจ่ายต้องห้าม</label><input type="text" id="cit_add1" onchange="calcCIT()"></div><div class="cit-row"><label>ค่ารับรองส่วนเกิน</label><input type="text" id="cit_add2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="text" id="cit_add3" onchange="calcCIT()"></div><div class="cit-head">หักออก</div><div class="cit-row"><label>รายได้ยกเว้น</label><input type="text" id="cit_ded1" onchange="calcCIT()"></div><div class="cit-row"><label>หักได้เพิ่ม</label><input type="text" id="cit_ded2" onchange="calcCIT()"></div><div class="cit-row"><label>อื่นๆ</label><input type="text" id="cit_ded3" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>กำไรทางภาษี</label><span id="cit_tax_profit">0.00</span></div></div><div class="cit-section"><div class="cit-head">2. คำนวณภาษี</div><div class="cit-row"><label>Rate (%)</label><input type="text" id="cit_rate" value="20" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีที่ต้องชำระ</label><span id="cit_amount" class="font-bold">0.00</span></div><div class="cit-head">เครดิตภาษี</div><div class="cit-row"><label>หัก ณ ที่จ่าย</label><input type="text" id="cit_wht" onchange="calcCIT()"></div><div class="cit-row"><label>ภาษีครึ่งปี</label><input type="text" id="cit_half" onchange="calcCIT()"></div><hr><div class="cit-row font-bold"><label>ชำระ/(คืน)</label><span id="cit_net_pay" style="font-size:1.2em;">0.00</span></div></div></div></div></div>
 
 </main>
 
 <script>
+    function parse(v) { return parseFloat(String(v).replace(/,/g,''))||0; }
+    function fmt(n) { return (n===''?'-':Number(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2})); }
+    function fmtVal(n) { return (n===0 || n==='0') ? '0.00' : (n ? Number(n).toLocaleString('en-US',{minimumFractionDigits:2}) : ''); }
+    function rmCom(el) { el.value = el.value.replace(/,/g,''); el.select(); }
+
     let app = { pp30:[], whtData:{pnd1:[],pnd3:[],pnd53:[]}, ssoData:[], kt20Data:[], assets:[], oca:[], ocl:[], defLedger:{}, revRecon:Array(12).fill({def_end:0,def_bf:0,gl:0}), cit:{net:0,add1:0,add2:0,add3:0,ded1:0,ded2:0,ded3:0,rate:20,wht:0,half:0}, vatNote:"" };
     const mo = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
     let curWHT = 'pnd1', curDefCust = null;
 
     window.onload = () => {
         const d = localStorage.getItem('maudit_v12'); 
-        if(d) try { app = {...app, ...JSON.parse(d)}; } catch(e) { console.error(e); }
+        if(d) {
+            try { 
+                let loaded = JSON.parse(d);
+                app = {...app, ...loaded};
+                // Safety Checks
+                if(Array.isArray(app.whtData)) app.whtData = {pnd1:[], pnd3:[], pnd53:[]};
+                ['pnd1','pnd3','pnd53'].forEach(k => { 
+                    if(!app.whtData[k] || !Array.isArray(app.whtData[k]) || app.whtData[k].length===0) { 
+                        app.whtData[k] = []; for(let i=0;i<12;i++) app.whtData[k].push({month:i, income:0, tax:0, rcpNo:'', fileDate:'', status:'รอ'}); 
+                    } 
+                });
+                if(!app.defLedger) app.defLedger = {};
+            } catch(e) { console.error(e); }
+        }
+        
+        // --- FIX: Initialize SSO Data if empty ---
+        if(!app.ssoData || !Array.isArray(app.ssoData) || app.ssoData.length === 0) {
+            app.ssoData = [];
+            for(let i=0; i<12; i++) app.ssoData.push({m: i, emp: 0, wage: 0, d: 0, c: 0, dt: ''});
+        }
+        // -----------------------------------------
+
         if(!app.pp30.length) for(let i=0;i<12;i++) app.pp30.push({m:mo[i],s:0,ts:0,b:0,tb:0,pd:'',rcp:''});
-        ['pnd1','pnd3','pnd53'].forEach(k => { if(!app.whtData[k] || app.whtData[k].length===0) { app.whtData[k] = []; for(let i=0;i<12;i++) app.whtData[k].push({month:i, income:0, tax:0, rcpNo:'', fileDate:'', status:'รอ'}); } });
-        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => { const el = document.getElementById('cit_'+k); if(el) el.value = app.cit[k] || 0; });
+        
+        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => { 
+            const el = document.getElementById('cit_'+k); 
+            if(el) { 
+                el.value = fmtVal(app.cit[k]); 
+                el.addEventListener('focus', function(){rmCom(this)}); 
+                el.addEventListener('blur', function(){calcCIT()}); 
+            } 
+        });
+        
         document.getElementById('vat-note').value = app.vatNote || "";
         renderAll();
     }
     
-    function saveData() { app.vatNote = document.getElementById('vat-note').value; localStorage.setItem('maudit_v12', JSON.stringify(app)); const s=document.getElementById('saveStatus'); s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1000); }
+    function saveData() { 
+        app.vatNote = document.getElementById('vat-note').value; 
+        localStorage.setItem('maudit_v12', JSON.stringify(app)); 
+        const s=document.getElementById('saveStatus'); s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1000); 
+    }
     function manualSave() { saveData(); alert("บันทึกข้อมูลเรียบร้อย"); }
-    function navTo(pid, el) { document.querySelectorAll('.page-section').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active')); document.getElementById(pid).classList.add('active'); el.classList.add('active'); if(pid==='page-vat') renderDeferred(); if(pid==='page-wht') renderWHT(); }
-    function setTab(btn, tid) { const p = btn.closest('.card'); p.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(tid).classList.add('active'); btn.classList.add('active'); if(tid==='vat-def') renderDeferred(); }
-    function fmt(n) { return n?Number(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}):'-'; }
+    
+    // NAVIGATION & TABS
+    function navTo(pid, el) { 
+        document.querySelectorAll('.page-section').forEach(p=>p.classList.remove('active')); 
+        document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active')); 
+        document.getElementById(pid).classList.add('active'); 
+        el.classList.add('active'); 
+        if(pid==='page-vat') renderDeferred(); 
+        if(pid==='page-wht') renderWHT(); 
+    }
+    function setTab(btn, tid) { 
+        const p = btn.closest('.card'); 
+        p.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); 
+        p.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); 
+        document.getElementById(tid).classList.add('active'); 
+        btn.classList.add('active'); 
+        if(tid==='vat-def') renderDeferred(); 
+    }
+    function setWHTTab(btn, type) {
+        curWHT = type;
+        const p = btn.closest('.card');
+        p.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderWHT();
+    }
 
-    // --- RENDERERS ---
+    // RENDERING
     function renderAll() { renderPP30(); renderWHT(); renderRevRecon(); renderDeferred(); renderSSO(); renderAssets(); renderOC(); calcCIT(); }
 
     function renderPP30() {
         const t=document.getElementById('tb-pp30'); t.innerHTML=''; let sum={s:0,ts:0,b:0,tb:0};
         app.pp30.forEach((r,i)=>{
             sum.s+=Number(r.s); sum.ts+=Number(r.ts); sum.b+=Number(r.b); sum.tb+=Number(r.tb);
-            t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('pp30',${i})">x</button></td><td><input class="tbl-inp center" value="${r.m}" onchange="upd('pp30',${i},'m',this.value)"></td><td><input class="tbl-inp" value="${r.s}" onchange="upd('pp30',${i},'s',this.value)"></td><td><input class="tbl-inp" value="${r.ts}" onchange="upd('pp30',${i},'ts',this.value)"></td><td><input class="tbl-inp" value="${r.b}" onchange="upd('pp30',${i},'b',this.value)"></td><td><input class="tbl-inp" value="${r.tb}" onchange="upd('pp30',${i},'tb',this.value)"></td><td style="text-align:right;">${fmt(r.ts-r.tb)}</td><td><input type="date" class="tbl-inp center" value="${r.pd||''}" onchange="upd('pp30',${i},'pd',this.value)"></td><td><input class="tbl-inp center" value="${r.rcp||''}" onchange="upd('pp30',${i},'rcp',this.value)"></td></tr>`;
+            t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('pp30',${i})">x</button></td><td><input class="tbl-inp center" value="${r.m}" onchange="upd('pp30',${i},'m',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.s)}" onfocus="rmCom(this)" onblur="upd('pp30',${i},'s',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.ts)}" onfocus="rmCom(this)" onblur="upd('pp30',${i},'ts',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.b)}" onfocus="rmCom(this)" onblur="upd('pp30',${i},'b',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.tb)}" onfocus="rmCom(this)" onblur="upd('pp30',${i},'tb',this.value)"></td><td class="text-right">${fmt(r.ts-r.tb)}</td><td><input type="date" class="tbl-inp center" value="${r.pd||''}" onchange="upd('pp30',${i},'pd',this.value)"></td><td><input class="tbl-inp center" value="${r.rcp||''}" onchange="upd('pp30',${i},'rcp',this.value)"></td></tr>`;
         });
         document.getElementById('tf-pp30').innerHTML = `<tr><td colspan="2">รวมทั้งสิ้น</td><td>${fmt(sum.s)}</td><td>${fmt(sum.ts)}</td><td>${fmt(sum.b)}</td><td>${fmt(sum.tb)}</td><td>${fmt(sum.ts-sum.tb)}</td><td></td><td></td></tr>`;
     }
@@ -210,10 +279,11 @@
     function renderWHT(){
         const tb=document.getElementById('tb-wht'); tb.innerHTML=''; let sum={inc:0, tax:0, emp:0};
         document.getElementById('th-wht-emp').style.display = (curWHT==='pnd1') ? '' : 'none';
+        if(!app.whtData[curWHT]) app.whtData[curWHT] = [];
         app.whtData[curWHT].forEach((r,i)=> {
             sum.inc+=Number(r.income); sum.tax+=Number(r.tax); sum.emp+=Number(r.emp||0);
             let empCol = (curWHT==='pnd1') ? `<td><input type="number" class="tbl-inp center" value="${r.emp||0}" onchange="upd('wht',${i},'emp',this.value)"></td>` : '';
-            tb.innerHTML+=`<tr><td class="center">${mo[r.month]}</td>${empCol}<td><input class="tbl-inp" value="${r.income}" onchange="upd('wht',${i},'income',this.value)"></td><td><input class="tbl-inp" value="${r.tax}" onchange="upd('wht',${i},'tax',this.value)"></td><td><input class="tbl-inp center" value="${r.rcpNo||''}" onchange="upd('wht',${i},'rcpNo',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.fileDate||''}" onchange="upd('wht',${i},'fileDate',this.value)"></td><td><select class="tbl-inp center" onchange="upd('wht',${i},'status',this.value)"><option value="รอ" ${r.status=='รอ'?'selected':''}>รอ</option><option value="ยื่นแล้ว" ${r.status=='ยื่นแล้ว'?'selected':''}>ยื่นแล้ว</option></select></td></tr>`;
+            tb.innerHTML+=`<tr><td class="center">${mo[r.month]}</td>${empCol}<td><input class="tbl-inp" value="${fmtVal(r.income)}" onfocus="rmCom(this)" onblur="upd('wht',${i},'income',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.tax)}" onfocus="rmCom(this)" onblur="upd('wht',${i},'tax',this.value)"></td><td><input class="tbl-inp center" value="${r.rcpNo||''}" placeholder="เลขที่ใบเสร็จ" onchange="upd('wht',${i},'rcpNo',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.fileDate||''}" onchange="upd('wht',${i},'fileDate',this.value)"></td><td><select class="tbl-inp center" onchange="upd('wht',${i},'status',this.value)"><option value="รอ" ${r.status=='รอ'?'selected':''}>รอ</option><option value="ยื่นแล้ว" ${r.status=='ยื่นแล้ว'?'selected':''}>ยื่นแล้ว</option></select></td></tr>`;
         });
         let tfEmp = (curWHT==='pnd1') ? `<td>${sum.emp}</td>` : '';
         document.getElementById('tf-wht').innerHTML = `<tr><td>รวม</td>${tfEmp}<td>${fmt(sum.inc)}</td><td>${fmt(sum.tax)}</td><td colspan="3"></td></tr>`;
@@ -228,22 +298,79 @@
              let accRev = Number(pp) + def_end - def_bf;
              let diff = accRev - gl;
              sum.pp+=Number(pp); sum.gl+=gl; sum.diff+=diff;
-             tb.innerHTML += `<tr><td>${app.pp30[i]?app.pp30[i].m:mo[i]}</td><td class="text-right">${fmt(pp)}</td><td><input class="tbl-inp" value="${def_end}" onchange="upd('rev',${i},'def_end',this.value)"></td><td><input class="tbl-inp" value="${def_bf}" onchange="upd('rev',${i},'def_bf',this.value)"></td><td class="text-right">${fmt(accRev)}</td><td style="background:#eff6ff;"><input class="tbl-inp" value="${gl}" onchange="upd('rev',${i},'gl',this.value)"></td><td class="text-right" style="color:${Math.abs(diff)>1?'red':'green'}; font-weight:bold;">${fmt(diff)}</td></tr>`;
+             tb.innerHTML += `<tr><td>${app.pp30[i]?app.pp30[i].m:mo[i]}</td><td class="text-right">${fmt(pp)}</td><td><input class="tbl-inp" value="${fmtVal(def_end)}" onfocus="rmCom(this)" onblur="upd('rev',${i},'def_end',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(def_bf)}" onfocus="rmCom(this)" onblur="upd('rev',${i},'def_bf',this.value)"></td><td class="text-right">${fmt(accRev)}</td><td style="background:#eff6ff;"><input class="tbl-inp" value="${fmtVal(gl)}" onfocus="rmCom(this)" onblur="upd('rev',${i},'gl',this.value)"></td><td class="text-right" style="color:${Math.abs(diff)>1?'red':'green'}; font-weight:bold;">${fmt(diff)}</td></tr>`;
         }
         document.getElementById('tf-rev-recon').innerHTML = `<tr><td>รวม</td><td>${fmt(sum.pp)}</td><td>-</td><td>-</td><td>-</td><td>${fmt(sum.gl)}</td><td>${fmt(sum.diff)}</td></tr>`;
     }
 
+    // DEFERRED RENDERER
+    function renderDeferred() {
+        const listEl = document.getElementById('def-list');
+        const detailEl = document.getElementById('def-detail');
+        const titleEl = document.getElementById('def-title');
+        const bfBox = document.getElementById('def-bf-box');
+        const inpBf = document.getElementById('inp-def-bf');
+        const term = document.getElementById('searchDef').value.toLowerCase();
+        
+        listEl.innerHTML = '';
+        if(!app.defLedger) app.defLedger = {};
+
+        Object.keys(app.defLedger).sort().forEach(key => {
+            if(term && !key.toLowerCase().includes(term)) return;
+            let item = document.createElement('div');
+            item.className = `cust-item ${curDefCust === key ? 'active' : ''}`;
+            item.innerHTML = `<span>${key}</span> <i class="fas fa-chevron-right" style="font-size:0.8em; color:#ccc;"></i>`;
+            item.onclick = () => selectDefCust(key);
+            listEl.appendChild(item);
+        });
+
+        detailEl.innerHTML = '';
+        if (curDefCust && app.defLedger[curDefCust]) {
+            titleEl.innerText = curDefCust;
+            bfBox.style.display = 'flex';
+            inpBf.value = fmtVal(app.defLedger[curDefCust].bf);
+            
+            let bal = Number(app.defLedger[curDefCust].bf);
+            let tbl = `<table class="table-sm"><thead><tr><th>วันที่</th><th>รายการ</th><th>ตัดรายได้ (Dr)</th><th>รับเงิน (Cr)</th><th>คงเหลือ</th><th>Del</th></tr></thead><tbody>`;
+            
+            app.defLedger[curDefCust].txns.forEach((t, i) => {
+                bal += (Number(t.cr) - Number(t.dr));
+                tbl += `<tr>
+                    <td>${t.d}</td>
+                    <td>${t.des}</td>
+                    <td class="text-right">${t.dr ? fmt(t.dr) : '-'}</td>
+                    <td class="text-right">${t.cr ? fmt(t.cr) : '-'}</td>
+                    <td class="text-right font-bold">${fmt(bal)}</td>
+                    <td class="center"><button class="btn-del" onclick="delDefTxn(${i})">x</button></td>
+                </tr>`;
+            });
+            tbl += `</tbody></table>`;
+            detailEl.innerHTML = tbl;
+        } else {
+            titleEl.innerText = 'กรุณาเลือกรายชื่อ';
+            bfBox.style.display = 'none';
+        }
+    }
+    function selectDefCust(name) { curDefCust = name; renderDeferred(); }
+    function saveDefBF() { if(curDefCust) { app.defLedger[curDefCust].bf = parse(document.getElementById('inp-def-bf').value); saveData(); renderDeferred(); } }
+    function delDefTxn(idx) { if(confirm('ลบรายการนี้?')) { app.defLedger[curDefCust].txns.splice(idx, 1); saveData(); renderDeferred(); } }
+    function addDefManual() { let name = prompt("ระบุชื่อลูกค้า/รายการ:"); if(name) { if(!app.defLedger[name]) app.defLedger[name] = { bf:0, txns:[] }; curDefCust = name; saveData(); renderDeferred(); } }
+
+
     function renderSSO() { 
         const t=document.getElementById('tb-sso'); t.innerHTML=''; let s={wage:0,d:0,c:0};
-        app.ssoData.forEach((r,i)=>{
-            s.wage+=Number(r.wage); s.d+=Number(r.d); s.c+=Number(r.c);
-            t.innerHTML+=`<tr><td class="center">${mo[r.m]}</td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('sso',${i},'emp',this.value)"></td><td><input class="tbl-inp" value="${r.wage}" onchange="upd('sso',${i},'wage',this.value)"></td><td><input class="tbl-inp" value="${r.d}" onchange="upd('sso',${i},'d',this.value)"></td><td><input class="tbl-inp" value="${r.c}" onchange="upd('sso',${i},'c',this.value)"></td><td style="text-align:right;">${fmt((r.d*1)+(r.c*1))}</td><td><input type="date" class="tbl-inp" value="${r.dt||''}" onchange="upd('sso',${i},'dt',this.value)"></td></tr>`
-        });
+        // Fix: Check if array exists and has data before rendering
+        if(app.ssoData && app.ssoData.length > 0) {
+            app.ssoData.forEach((r,i)=>{
+                s.wage+=Number(r.wage); s.d+=Number(r.d); s.c+=Number(r.c);
+                t.innerHTML+=`<tr><td class="center">${mo[r.m]}</td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('sso',${i},'emp',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.wage)}" onfocus="rmCom(this)" onblur="upd('sso',${i},'wage',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.d)}" onfocus="rmCom(this)" onblur="upd('sso',${i},'d',this.value)"></td><td><input class="tbl-inp" value="${fmtVal(r.c)}" onfocus="rmCom(this)" onblur="upd('sso',${i},'c',this.value)"></td><td class="text-right">${fmt((r.d*1)+(r.c*1))}</td><td><input type="date" class="tbl-inp" value="${r.dt||''}" onchange="upd('sso',${i},'dt',this.value)"></td></tr>`
+            });
+        }
         document.getElementById('tf-sso').innerHTML = `<tr><td colspan="2">รวม</td><td>${fmt(s.wage)}</td><td>${fmt(s.d)}</td><td>${fmt(s.c)}</td><td>${fmt(s.d+s.c)}</td><td></td></tr>`;
         
         const k=document.getElementById('tb-kt20'); k.innerHTML=''; 
-        app.kt20Data.forEach((r,i)=>k.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('kt20',${i})">x</button></td><td><input class="tbl-inp center" value="${r.y||''}" onchange="upd('kt20',${i},'y',this.value)"></td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('kt20',${i},'emp',this.value)"></td><td><input class="tbl-inp text-right" value="${r.w||0}" onchange="upd('kt20',${i},'w',this.value)"></td><td><input class="tbl-inp text-right" value="${r.pay||0}" onchange="upd('kt20',${i},'pay',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.dt||''}" onchange="upd('kt20',${i},'dt',this.value)"></td></tr>`); 
-        document.getElementById('tf-kt20').innerHTML = ''; // KT20 usually summary per year line
+        app.kt20Data.forEach((r,i)=>k.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('kt20',${i})">x</button></td><td><input class="tbl-inp center" value="${r.y||''}" onchange="upd('kt20',${i},'y',this.value)"></td><td><input class="tbl-inp center" value="${r.emp||0}" onchange="upd('kt20',${i},'emp',this.value)"></td><td><input class="tbl-inp text-right" value="${fmtVal(r.w)}" onfocus="rmCom(this)" onblur="upd('kt20',${i},'w',this.value)"></td><td><input class="tbl-inp text-right" value="${fmtVal(r.pay)}" onfocus="rmCom(this)" onblur="upd('kt20',${i},'pay',this.value)"></td><td><input type="date" class="tbl-inp center" value="${r.dt||''}" onchange="upd('kt20',${i},'dt',this.value)"></td></tr>`); 
+        document.getElementById('tf-kt20').innerHTML = '';
     }
 
     function renderAssets() { 
@@ -253,66 +380,88 @@
             let acc = Number(a.bf) + dep;
             let nbv = a.c - acc;
             s.c+=Number(a.c); s.bf+=Number(a.bf); s.dep+=dep; s.nbv+=nbv;
-            t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('assets',${i})">x</button></td><td><input class="tbl-inp" style="text-align:left" value="${a.n}" onchange="updArr('assets',${i},'n',this.value)"></td><td><input type="date" class="tbl-inp" value="${a.d}" onchange="updArr('assets',${i},'d',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.c}" onchange="updArr('assets',${i},'c',this.value)"></td><td><input type="number" class="tbl-inp center" value="${a.r}" onchange="updArr('assets',${i},'r',this.value)"></td><td><input type="number" class="tbl-inp" value="${a.bf}" onchange="updArr('assets',${i},'bf',this.value)"></td><td class="text-right">${fmt(dep)}</td><td class="text-right">${fmt(acc)}</td><td class="text-right">${fmt(nbv)}</td></tr>`;
+            t.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('assets',${i})">x</button></td><td><input class="tbl-inp" style="text-align:left" value="${a.n}" onchange="updArr('assets',${i},'n',this.value)"></td><td><input type="date" class="tbl-inp" value="${a.d}" onchange="updArr('assets',${i},'d',this.value)"></td><td><input type="text" class="tbl-inp" value="${fmtVal(a.c)}" onfocus="rmCom(this)" onblur="updArr('assets',${i},'c',this.value)"></td><td><input type="number" class="tbl-inp center" value="${a.r}" onchange="updArr('assets',${i},'r',this.value)"></td><td><input type="text" class="tbl-inp" value="${fmtVal(a.bf)}" onfocus="rmCom(this)" onblur="updArr('assets',${i},'bf',this.value)"></td><td class="text-right">${fmt(dep)}</td><td class="text-right">${fmt(acc)}</td><td class="text-right">${fmt(nbv)}</td></tr>`;
         });
         document.getElementById('tf-assets').innerHTML = `<tr><td colspan="3">รวม</td><td>${fmt(s.c)}</td><td></td><td>${fmt(s.bf)}</td><td>${fmt(s.dep)}</td><td></td><td>${fmt(s.nbv)}</td></tr>`;
     }
 
     function renderOC() { 
         const t1=document.getElementById('tb-oca'); t1.innerHTML=''; let s1=0;
-        app.oca.forEach((o,i)=>{ s1+=Number(o.v); t1.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('oca',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('oca',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('oca',${i},'n',this.value)"></td><td><input type="number" class="tbl-inp" value="${o.v}" onchange="updArr('oca',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('oca',${i},'r',this.value)"></td></tr>`; });
+        app.oca.forEach((o,i)=>{ s1+=Number(o.v); t1.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('oca',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('oca',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('oca',${i},'n',this.value)"></td><td><input type="text" class="tbl-inp" value="${fmtVal(o.v)}" onfocus="rmCom(this)" onblur="updArr('oca',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('oca',${i},'r',this.value)"></td></tr>`; });
         document.getElementById('tf-oca').innerHTML = `<tr><td colspan="3">รวม</td><td>${fmt(s1)}</td><td></td></tr>`;
 
         const t2=document.getElementById('tb-ocl'); t2.innerHTML=''; let s2=0;
-        app.ocl.forEach((o,i)=>{ s2+=Number(o.v); t2.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('ocl',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('ocl',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('ocl',${i},'n',this.value)"></td><td><input type="number" class="tbl-inp" value="${o.v}" onchange="updArr('ocl',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('ocl',${i},'r',this.value)"></td></tr>`; });
+        app.ocl.forEach((o,i)=>{ s2+=Number(o.v); t2.innerHTML+=`<tr><td class="no-print"><button class="btn-del" onclick="delRow('ocl',${i})">x</button></td><td><input type="date" class="tbl-inp" value="${o.d}" onchange="updArr('ocl',${i},'d',this.value)"></td><td><input class="tbl-inp" style="text-align:left" value="${o.n}" onchange="updArr('ocl',${i},'n',this.value)"></td><td><input type="text" class="tbl-inp" value="${fmtVal(o.v)}" onfocus="rmCom(this)" onblur="updArr('ocl',${i},'v',this.value)"></td><td><input class="tbl-inp" value="${o.r}" onchange="updArr('ocl',${i},'r',this.value)"></td></tr>`; });
         document.getElementById('tf-ocl').innerHTML = `<tr><td colspan="3">รวม</td><td>${fmt(s2)}</td><td></td></tr>`;
     }
 
-    // [Standard Logic]
-    function renderDeferred() {
-        const lst=document.getElementById('def-list'); lst.innerHTML='';
-        const term=document.getElementById('searchDef').value.toLowerCase();
-        for(let c in app.defLedger) {
-            if(c.toLowerCase().includes(term)) {
-                let d = app.defLedger[c];
-                let mv = d.txns.reduce((a,b)=>a+(b.cr-b.dr),0);
-                let total = (d.bf || 0) + mv;
-                let activeClass = (curDefCust === c) ? 'active' : '';
-                lst.innerHTML+=`<div class="cust-item ${activeClass}" onclick="showDef('${c.replace(/'/g,"\\'")}')"><strong>${c}</strong><span style="font-size:0.8em; color:${total<0?'#ef4444':'#10b981'}">คงเหลือ: ${fmt(total)}</span></div>`;
-            }
-        }
+    // UPDATES & LOGIC
+    function upd(type, i, k, v) { 
+        let val = (k==='s'||k==='ts'||k==='b'||k==='tb'||k==='income'||k==='tax'||k==='wage'||k==='d'||k==='c'||k==='w'||k==='pay'||k==='def_end'||k==='def_bf'||k==='gl') ? parse(v) : v;
+        if(type==='pp30') app.pp30[i][k]=val; 
+        if(type==='wht') app.whtData[curWHT][i][k]=val; 
+        if(type==='sso') app.ssoData[i][k]=val; 
+        if(type==='kt20') app.kt20Data[i][k]=val; 
+        if(type==='rev') { if(!app.revRecon[i]) app.revRecon[i]={}; app.revRecon[i][k]=val; } 
+        saveData(); renderAll(); 
     }
-    function showDef(n) {
-        curDefCust = n; renderDeferred();
-        const data = app.defLedger[n];
-        document.getElementById('def-title').innerText = n;
-        document.getElementById('def-bf-box').style.display = 'flex';
-        document.getElementById('inp-def-bf').value = data.bf || 0;
-        let runBal = data.bf || 0;
-        let h=`<table width="100%"><thead><tr><th>วันที่</th><th>เอกสาร</th><th>รายการ</th><th class="text-right">ตัดออก (Dr)</th><th class="text-right">รับมัดจำ (Cr)</th><th class="text-right">คงเหลือ</th></tr></thead><tbody>`;
-        h += `<tr style="background:#fffbeb; font-weight:bold; color:#92400e;"><td colspan="3">ยอดยกมา (B/F)</td><td></td><td></td><td class="text-right">${fmt(runBal)}</td></tr>`;
-        data.txns.forEach(r=>{ runBal += (r.cr - r.dr); h+=`<tr><td>${r.d}</td><td>${r.doc}</td><td>${r.des}</td><td class="text-right" style="color:#ef4444;">${r.dr>0 ? fmt(r.dr) : '-'}</td><td class="text-right" style="color:#10b981;">${r.cr>0 ? fmt(r.cr) : '-'}</td><td class="text-right font-bold">${fmt(runBal)}</td></tr>`; });
-        document.getElementById('def-detail').innerHTML=h+`</tbody></table>`;
-    }
-    function saveDefBF() { if(curDefCust) { app.defLedger[curDefCust].bf = Number(document.getElementById('inp-def-bf').value); saveData(); showDef(curDefCust); renderDeferred(); } }
-    function addDefManual() { let n = prompt("ระบุชื่อบริษัท:"); if(n && !app.defLedger[n]) { app.defLedger[n] = { bf:0, txns:[] }; saveData(); renderDeferred(); showDef(n); } }
     
-    function upd(type, i, k, v) { if(type==='pp30') app.pp30[i][k]=(k==='pd'||k==='rcp'||k==='m')?v:Number(v); if(type==='wht') app.whtData[curWHT][i][k]=(k==='date'||k==='rcpNo'||k==='fileDate'||k==='status'?v:Number(v)); if(type==='sso') app.ssoData[i][k]=(k==='dt'?v:Number(v)); if(type==='kt20') app.kt20Data[i][k]=(k==='dt'?v:Number(v)); if(type==='rev') { if(!app.revRecon[i]) app.revRecon[i]={}; app.revRecon[i][k]=Number(v); } saveData(); renderAll(); }
-    function updArr(type, i, k, v) { app[type][i][k] = (k==='d'||k==='n'||k==='r') ? v : Number(v); saveData(); renderAll(); }
+    function updArr(type, i, k, v) { 
+        let val = (k==='c'||k==='bf'||k==='v') ? parse(v) : v; 
+        app[type][i][k] = val; saveData(); renderAll(); 
+    }
+    
     function delRow(type, i) { if(type==='assets'||type==='oca'||type==='ocl') app[type].splice(i,1); else if(type==='pp30') app.pp30.splice(i,1); else if(type==='kt20') app.kt20Data.splice(i,1); saveData(); renderAll(); }
     function addPP30Row(){ app.pp30.push({m:'ระบุเดือน',s:0,ts:0,b:0,tb:0,pd:'',rcp:''}); saveData(); renderAll(); }
     function addKT20(){ app.kt20Data.push({y:new Date().getFullYear()+543,emp:0,w:0,pay:0}); saveData(); renderAll(); }
     function addAsset(){ app.assets.push({n:'ทรัพย์สินใหม่',d:'',c:0,r:20,bf:0}); saveData(); renderAll(); }
     function addOC(t){ let o={d:'',n:'',v:0,r:''}; if(t==1) app.oca.push(o); else app.ocl.push(o); saveData(); renderAll(); }
-    function calcCIT() { ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => app.cit[k] = Number(document.getElementById('cit_'+k).value)); let totalAdd = app.cit.add1 + app.cit.add2 + app.cit.add3; let totalDed = app.cit.ded1 + app.cit.ded2 + app.cit.ded3; let taxProfit = app.cit.net + totalAdd - totalDed; let taxAmt = taxProfit > 0 ? taxProfit * (app.cit.rate/100) : 0; let netPay = taxAmt - app.cit.wht - app.cit.half; document.getElementById('cit_tax_profit').innerText = fmt(taxProfit); document.getElementById('cit_amount').innerText = fmt(taxAmt); document.getElementById('cit_net_pay').innerText = fmt(netPay); document.getElementById('cit_net_pay').style.color = netPay > 0 ? 'red' : 'green'; saveData(); }
+    function calcCIT() { 
+        ['net','add1','add2','add3','ded1','ded2','ded3','rate','wht','half'].forEach(k => app.cit[k] = parse(document.getElementById('cit_'+k).value)); 
+        let totalAdd = app.cit.add1 + app.cit.add2 + app.cit.add3; let totalDed = app.cit.ded1 + app.cit.ded2 + app.cit.ded3; 
+        let taxProfit = app.cit.net + totalAdd - totalDed; 
+        let taxAmt = taxProfit > 0 ? taxProfit * (app.cit.rate/100) : 0; 
+        let netPay = taxAmt - app.cit.wht - app.cit.half; 
+        document.getElementById('cit_tax_profit').innerText = fmt(taxProfit); document.getElementById('cit_amount').innerText = fmt(taxAmt); document.getElementById('cit_net_pay').innerText = fmt(netPay); document.getElementById('cit_net_pay').style.color = netPay > 0 ? 'red' : 'green'; saveData(); 
+    }
     function backupData(){ const a=document.createElement('a'); a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(app)); a.download='MAudit_Backup.json'; a.click(); }
     function restoreData(el){ const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{app=JSON.parse(e.target.result); saveData(); location.reload();}; r.readAsText(f); }
-    function exportToExcel(eid, fname) { var wb = XLSX.utils.table_to_book(document.getElementById(eid)); XLSX.writeFile(wb, fname+".xlsx"); }
     function saveVatNote() { app.vatNote = document.getElementById('vat-note').value; saveData(); }
     function clearDef() { if(confirm('ล้างข้อมูล Deferred?')) { app.defLedger={}; curDefCust=null; saveData(); renderDeferred(); document.getElementById('def-detail').innerHTML=''; document.getElementById('def-bf-box').style.display='none'; } }
+    
     function impUniv(el, t) { const f = el.files[0]; if(!f) return; const reader = new FileReader(); if(f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) { reader.readAsArrayBuffer(f); reader.onload = (e) => { const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'}); const jsonArr = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1, defval:""}); processData(jsonArr, t); }; } else { let enc='windows-874'; if(t==='sso'||t==='asset'||t==='oca'||t==='ocl') enc='utf-8'; reader.readAsText(f, enc); reader.onload = (e) => { let lines = e.target.result.split(/\r\n|\n/).map(l => (l.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[]).map(m=>m.replace(/^"|"$/g,'').trim())); processData(lines, t); }; } el.value = ''; }
     function processData(rows, t) { let hI=-1; for(let i=0; i<Math.min(rows.length,50); i++) { let r = rows[i].map(x=>String(x).toLowerCase()); if(r.some(x=>x.includes("วันที่")||x.includes("date"))) { hI=i; break; } } if(hI<0){alert("ไม่พบหัวตาราง"); return;} let h=rows[hI].map(x=>String(x).toLowerCase()); let cDt=h.findIndex(c=>c.includes("วันที่")||c.includes("date")); let cDes=h.findIndex(c=>c.includes("รายการ")||c.includes("ชื่อ")||c.includes("desc")); let cVal=h.findIndex(c=>c.includes("จำนวน")||c.includes("amount")||c.includes("ทุน")); let cDr=h.findIndex(c=>c.includes("เดบิต")); let cCr=h.findIndex(c=>c.includes("เครดิต")); if(t==='def'){ let count = 0; for(let i=hI+1; i<rows.length; i++){ let r=rows[i]; if(!r[cDt]) continue; let dStr = r[cDt]; if(typeof dStr === 'number') { dStr = new Date((dStr - (25567 + 2))*86400*1000).toLocaleDateString('en-GB'); } let dr=parseFloat(String(r[cDr]||0).replace(/,/g,''))||0; let cr=parseFloat(String(r[cCr]||0).replace(/,/g,''))||0; if(dr!==0 || cr!==0){ let n = String(r[cDes]||"").replace(/^(ขาย-|รับเงินมัดจำ-|รับชำระหนี้-|ขายเชื่อ)[-\s]*/g,'').trim(); n = n.replace(/(บริษัท|จำกัด|หจก\.|บจก\.|มหาชน|\(สำนักงานใหญ่\)|\(มหาชน\))/g, '').trim(); if(!app.defLedger[n]) app.defLedger[n] = { bf:0, txns:[] }; let exists = app.defLedger[n].txns.some(x => x.d==dStr && x.dr==dr && x.cr==cr); if(!exists) { app.defLedger[n].txns.push({ d:dStr, doc:r[cDes-1]||"", des:String(r[cDes]||""), dr, cr }); count++; } } } alert(`Import Deferred: ${count}`); renderDeferred(); } else if(t==='revGL') { alert("Import GL Function"); } else if(t==='sso') { app.ssoData = []; for(let i=hI+1; i<rows.length; i++) { let r=rows[i]; if(r[cVal]) app.ssoData.push({m:i-hI-1, emp:0, wage:parseFloat(String(r[cVal]).replace(/,/g,'')), d:0, c:0, dt:r[cDt]}); } alert("Import SSO OK"); } else if(t==='asset') { for(let i=hI+1; i<rows.length; i++) { let r=rows[i]; if(r[cDes]) app.assets.push({n:r[cDes], d:r[cDt], c:parseFloat(String(r[cVal]).replace(/,/g,'')), r:20, bf:0}); } alert("Import Assets OK"); } saveData(); renderAll(); }
-    function exportDeferred() { let d = [["Customer", "Date", "Doc", "Desc", "Cut (Dr)", "Deposit (Cr)", "Balance"]]; for(let k in app.defLedger) { let bal = app.defLedger[k].bf || 0; d.push([k, "B/F", "", "ยอดยกมา", "", "", bal]); app.defLedger[k].txns.forEach(t => { bal+=(t.cr-t.dr); d.push([k, t.d, t.doc, t.des, t.dr, t.cr, bal]); }); } const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(d); XLSX.utils.book_append_sheet(wb, ws, "Deferred_Revenue"); XLSX.writeFile(wb, "Deferred_Report.xlsx"); }
+    
+    // EXPORT FUNCTIONS
+    function exportPP30() { let d = [["Month", "Sales", "Output Tax", "Purchase", "Input Tax", "Pay/(Claim)", "Date", "Receipt"]]; app.pp30.forEach(r => d.push([r.m, r.s, r.ts, r.b, r.tb, r.ts-r.tb, r.pd, r.rcp])); XLSX.writeFile(XLSX.utils.aoa_to_sheet(d), "PP30.xlsx"); }
+    function exportWHT() { let d = [["Month", "Emp", "Income", "Tax", "Receipt", "Date", "Status"]]; app.whtData[curWHT].forEach(r => d.push([mo[r.month], r.emp, r.income, r.tax, r.rcpNo, r.fileDate, r.status])); XLSX.writeFile(XLSX.utils.aoa_to_sheet(d), `WHT_${curWHT}.xlsx`); }
+    function exportSSO() { let d = [["Month", "Emp", "Wage", "Emp Ded", "Comp Cont", "Total", "Date"]]; app.ssoData.forEach(r => d.push([mo[r.m], r.emp, r.wage, r.d, r.c, r.d+r.c, r.dt])); XLSX.writeFile(XLSX.utils.aoa_to_sheet(d), "SSO.xlsx"); }
+    function exportAssets() { let d = [["Name", "Date", "Cost", "Rate", "B/F Acc", "Dep This Year", "Acc End", "NBV"]]; app.assets.forEach(a => { let dep = (a.c * (a.r/100)); let acc = Number(a.bf) + dep; d.push([a.n, a.d, a.c, a.r, a.bf, dep, acc, a.c-acc]); }); XLSX.writeFile(XLSX.utils.aoa_to_sheet(d), "Assets.xlsx"); }
+    function exportOther() { let d1 = [["OCA: Date", "Item", "Amount", "Note"]]; app.oca.forEach(o => d1.push([o.d, o.n, o.v, o.r])); let d2 = [["OCL: Date", "Item", "Amount", "Note"]]; app.ocl.forEach(o => d2.push([o.d, o.n, o.v, o.r])); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d1), "Assets"); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d2), "Liabilities"); XLSX.writeFile(wb, "Other_Current.xlsx"); }
+    function exportCIT() { let d = [["Item", "Amount"], ["Net Profit (Book)", app.cit.net], ["Additions", app.cit.add1+app.cit.add2+app.cit.add3], ["Deductions", app.cit.ded1+app.cit.ded2+app.cit.ded3], ["Tax Profit", document.getElementById('cit_tax_profit').innerText], ["Tax Amount", document.getElementById('cit_amount').innerText]]; XLSX.writeFile(XLSX.utils.aoa_to_sheet(d), "CIT_Calculation.xlsx"); }
+    function exportDeferred() { let d = [["Customer", "Date", "Doc", "Desc", "Cut (Dr)", "Deposit (Cr)", "Balance"]]; for(let k in app.defLedger) { let bal = app.defLedger[k].bf || 0; d.push([k, "B/F", "", "ยอดยกมา", "", "", bal]); app.defLedger[k].txns.forEach(t => { bal+=(t.cr-t.dr); d.push([k, t.d, t.doc, t.des, t.dr, t.cr, bal]); }); } const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d), "Deferred_Revenue"); XLSX.writeFile(wb, "Deferred_Report.xlsx"); }
+    
+    function exportAllData() {
+        let wb = XLSX.utils.book_new();
+        let pp = [["Month", "Sales", "Output Tax", "Purchase", "Input Tax", "Pay/(Claim)", "Date", "Receipt"]];
+        app.pp30.forEach(r => pp.push([r.m, r.s, r.ts, r.b, r.tb, r.ts-r.tb, r.pd, r.rcp]));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pp), "PP30");
+        ['pnd1', 'pnd3', 'pnd53'].forEach(type => {
+            let w = [["Month", "Emp", "Income", "Tax", "Receipt", "Date", "Status"]];
+            app.whtData[type].forEach(r => w.push([mo[r.month], r.emp, r.income, r.tax, r.rcpNo, r.fileDate, r.status]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(w), type.toUpperCase());
+        });
+        let sso = [["Month", "Emp", "Wage", "Emp Ded", "Comp Cont", "Total", "Date"]];
+        app.ssoData.forEach(r => sso.push([mo[r.m], r.emp, r.wage, r.d, r.c, r.d+r.c, r.dt]));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sso), "SSO");
+        let ast = [["Name", "Date", "Cost", "Rate", "B/F Acc", "Dep This Year", "Acc End", "NBV"]];
+        app.assets.forEach(a => {
+            let dep = (a.c * (a.r/100)); let acc = Number(a.bf) + dep;
+            ast.push([a.n, a.d, a.c, a.r, a.bf, dep, acc, a.c-acc]);
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ast), "Fixed_Assets");
+        XLSX.writeFile(wb, "Full_Audit_Data.xlsx");
+    }
 </script>
 </body>
 </html>
